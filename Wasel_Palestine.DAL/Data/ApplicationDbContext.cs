@@ -6,7 +6,7 @@ using Wasel_Palestine.DAL.Model;
 
 namespace Wasel_Palestine.DAL.Data
 {
-    public class ApplicationDbContext : IdentityDbContext<IdentityUser>
+    public class ApplicationDbContext : IdentityDbContext<User, Role, string>
     {
         public DbSet<User> Users { get; set; }
         public DbSet<Role> Roles { get; set; }
@@ -44,19 +44,17 @@ namespace Wasel_Palestine.DAL.Data
         {
             base.OnModelCreating(builder);
 
-            // ======================
-            // Identity tables rename
-            // ======================
-            builder.Ignore<Microsoft.AspNetCore.Identity.IdentityPasskeyData>();
-            builder.Entity<IdentityUser>().ToTable("IdentityUser");
-            builder.Entity<IdentityRole>().ToTable("IdentityRole");
-            builder.Entity<IdentityUserRole<string>>().ToTable("IdentityUserRole");
-            builder.Entity<IdentityUserClaim<string>>().ToTable("UserClaims");
-            builder.Entity<IdentityRoleClaim<string>>().ToTable("RoleClaims");
-            builder.Entity<IdentityUserLogin<string>>().ToTable("UserLogins");
-            builder.Entity<IdentityUserToken<string>>().ToTable("UserTokens");
+          
+          //  builder.Ignore<Microsoft.AspNetCore.Identity.IdentityPasskeyData>();
+            builder.Entity<User>().ToTable("AspNetUsers");
+            builder.Entity<Role>().ToTable("AspNetRoles");
+            builder.Entity<IdentityUserRole<string>>().ToTable("AspNetUserRoles");
+            builder.Entity<IdentityUserClaim<string>>().ToTable("AspNetUserClaims");
+            builder.Entity<IdentityRoleClaim<string>>().ToTable("AspNetRoleClaims");
+            builder.Entity<IdentityUserLogin<string>>().ToTable("AspNetUserLogins");
+            builder.Entity<IdentityUserToken<string>>().ToTable("AspNetUserTokens");
 
-        
+
             builder.Entity<Location>(entity =>
             {
                 entity.Property(e => e.Latitude).HasPrecision(9, 6);

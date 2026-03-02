@@ -21,7 +21,6 @@
     <Folder Include="DTO\Request\" />
     <Folder Include="Migrations\" />
     <Folder Include="validations\" />
-    <Folder Include="Utils\" />
     <Folder Include="Repository\" />
   </ItemGroup>
 

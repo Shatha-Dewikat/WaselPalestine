@@ -10,7 +10,7 @@ namespace Wasel_Palestine.DAL.Model
         public int ReportId { get; set; }
         public Report Report { get; set; }
 
-        public int ModeratorId { get; set; }
+        public string ModeratorId { get; set; }
         public User Moderator { get; set; }
 
         public string Action { get; set; }

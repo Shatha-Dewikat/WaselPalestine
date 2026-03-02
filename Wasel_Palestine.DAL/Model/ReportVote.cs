@@ -11,7 +11,7 @@ namespace Wasel_Palestine.DAL.Model
         public int ReportId { get; set; }
         public Report Report { get; set; }
 
-        public int UserId { get; set; }
+        public string UserId { get; set; }
         public User User { get; set; }
 
         public string VoteType { get; set; }

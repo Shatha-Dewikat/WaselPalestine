@@ -7,7 +7,7 @@ namespace Wasel_Palestine.DAL.Model
     public class RouteRequest
     {
         public int Id { get; set; }
-        public int? UserId { get; set; }
+        public string? UserId { get; set; }
         public User User { get; set; }
 
         public int FromLocationId { get; set; }

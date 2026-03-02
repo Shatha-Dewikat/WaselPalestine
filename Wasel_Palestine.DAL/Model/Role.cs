@@ -6,15 +6,9 @@ using System.Text;
 
 namespace Wasel_Palestine.DAL.Model
 {
-    public class Role 
+    public class Role : IdentityRole
     {
-        public int Id { get; set; }
-
-        [Required]
-        [MaxLength(100)]
-        public string Name { get; set; }
-
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public List<UserRole> UserRoles { get; set; }
     }
