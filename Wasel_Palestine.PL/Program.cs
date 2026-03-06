@@ -1,9 +1,12 @@
-
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Wasel_Palestine.BLL.Service;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
+using Wasel_Palestine.DAL.Repository;
 using Wasel_Palestine.DAL.Utils;
+using Mapster;
+
 
 namespace Wasel_Palestine.PL
 {
@@ -19,7 +22,7 @@ namespace Wasel_Palestine.PL
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-
+            
             builder.Services.AddControllers();
 
             builder.Services.AddScoped<RoleSeedData>();
@@ -29,10 +32,12 @@ namespace Wasel_Palestine.PL
             builder.Services.AddScoped<ISeedData, RoleSeedData>();
             builder.Services.AddScoped<ISeedData, UserSeedData>();
             builder.Services.AddScoped<ISeedData, ReportStatusSeedData>();
+            
+            builder.Services.AddScoped<IIncidentService, IncidentService>();
 
+            builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
 
-
-
+            builder.Services.AddMapster();
             builder.Services.AddOpenApi();
 
             var app = builder.Build();
@@ -44,20 +49,18 @@ namespace Wasel_Palestine.PL
             {
                 var services = scope.ServiceProvider;
 
-                // أولاً نضيف Roles
                 var roleSeeder = services.GetRequiredService<RoleSeedData>();
                 await roleSeeder.DataSeed();
 
-                // بعدين نضيف Users
                 var userSeeder = services.GetRequiredService<UserSeedData>();
                 await userSeeder.DataSeed();
 
-                // وأخيراً أي Seeder آخر مثل ReportStatus
+            
                 var statusSeeder = services.GetRequiredService<ReportStatusSeedData>();
                 await statusSeeder.DataSeed();
             }
 
-            // Configure the HTTP request pipeline.
+           
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
