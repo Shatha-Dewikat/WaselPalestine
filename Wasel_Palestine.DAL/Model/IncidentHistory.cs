@@ -16,7 +16,7 @@ namespace Wasel_Palestine.DAL.Model
 
         public DateTime ChangedAt { get; set; }
 
-        public int ChangedByUserId { get; set; }
+        public String ChangedByUserId { get; set; }
         public User ChangedByUser { get; set; }
     }
 }
