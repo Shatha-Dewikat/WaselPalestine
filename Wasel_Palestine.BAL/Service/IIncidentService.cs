@@ -14,5 +14,8 @@ namespace Wasel_Palestine.BLL.Service
         Task<List<IncidentResponse>> GetIncidentAllAsync();
 
         Task<IncidentResponse> DeleteIncidentAsync(int id);
+        Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter);
+        Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest paginationRequest);
+        Task<List<IncidentResponse>> GetFilteredPagedIncidentsAsync(IncidentQueryRequest request);
     }
 }

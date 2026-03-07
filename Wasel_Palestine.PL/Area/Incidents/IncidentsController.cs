@@ -72,5 +72,32 @@ namespace Wasel_Palestine.PL.Area.Incidents
 
             return Ok(deletedIncident);
         }
+        [HttpGet("filter")]
+        [Authorize]
+        public async Task<IActionResult> GetFilteredIncidents(IncidentFilterRequest filter)
+        {
+            var filteredIncidents = await _IncidentSevice.GetFilteredIncidentsAsync(filter);
+            return Ok(filteredIncidents);
+
+        }
+        [HttpGet("paged")]
+        [Authorize]
+        public async Task<IActionResult> GetPagedIncidents([FromQuery] PaginationRequest paginationRequest)
+        {
+            if (paginationRequest.PageNumber < 1 || paginationRequest.PageSize < 1)
+                return BadRequest("Invalid pagination values");
+
+            var pagedIncidents = await _IncidentSevice.GetPagedIncidentsAsync(paginationRequest);
+
+            return Ok(pagedIncidents);
+        }
+
+        [HttpGet("query")]
+        [Authorize]
+        public async Task<IActionResult> GetIncidents([FromQuery] IncidentQueryRequest request)
+        {
+            var result = await _IncidentSevice.GetFilteredPagedIncidentsAsync(request);
+            return Ok(result);
+        }
     }
 }

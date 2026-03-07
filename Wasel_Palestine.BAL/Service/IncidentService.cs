@@ -147,5 +147,75 @@ namespace Wasel_Palestine.BLL.Service
             await _incidentRepo.DeleteAsync(incident);
             return new IncidentResponse { Success = true, Message = "Incident deleted successfully" };
         }
+        public async Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter)
+        {
+            var incidents = await _incidentRepo.GetFilteredAsync(filter);
+
+            var response = new List<IncidentResponse>();
+
+            foreach (var incident in incidents)
+            {
+                response.Add(new IncidentResponse
+                {
+                    Id = incident.Id,
+                    Title = incident.Title,
+                    Description = incident.Description,
+                    Category = incident.Category?.Name,
+                    Severity = incident.Severity?.Name,
+                    Status = incident.Status?.Name,
+                    Latitude = (double)incident.Location.Latitude,
+                    Longitude = (double)incident.Location.Longitude,
+                    CreatedAt = incident.CreatedAt
+                });
+            }
+
+            return response;
+        }
+
+        public async Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest paginationRequest)
+        {
+            var incidents = await _incidentRepo.GetPagedAsync(paginationRequest);
+
+            var response = new List<IncidentResponse>();
+
+            foreach (var incident in incidents)
+            {
+                response.Add(new IncidentResponse
+                {
+                    Id = incident.Id,
+                    Title = incident.Title,
+                    Description = incident.Description,
+                    Category = incident.Category?.Name,
+                    Severity = incident.Severity?.Name,
+                    Status = incident.Status?.Name,
+                    Latitude = (double)incident.Location.Latitude,
+                    Longitude = (double)incident.Location.Longitude,
+                    CreatedAt = incident.CreatedAt
+                });
+            }
+
+            return response;
+        }
+
+        public async Task<List<IncidentResponse>> GetFilteredPagedIncidentsAsync(IncidentQueryRequest request)
+        {
+            var incidents = await _incidentRepo.GetFilteredPagedAsync(request);
+            var response = incidents.Select(i => new IncidentResponse
+            {
+                Id = i.Id,
+                Title = i.Title,
+                Description = i.Description,
+                Category = i.Category?.Name,
+                Severity = i.Severity?.Name,
+                Status = i.Status?.Name,
+                Latitude = (double)i.Location.Latitude,
+                Longitude = (double)i.Location.Longitude,
+                CreatedAt = i.CreatedAt
+            }).ToList();
+
+            return response;
+        }
+
+
     }
 }
