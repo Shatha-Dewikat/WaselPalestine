@@ -45,21 +45,20 @@ namespace Wasel_Palestine.PL.Area.Incidents
 
         [HttpGet("{id}")]
         [Authorize]
-        public async Task<IActionResult> GetIncidentById(int id)
+        public async Task<IActionResult> GetIncidentById(int id, [FromQuery] string lang = "en")
         {
-            var getIncident = await _IncidentSevice.GetIncidentByIdAsync(id);
-            if (getIncident == null)
+            var getIncident = await _IncidentSevice.GetIncidentByIdAsync(id, lang);
+            if (getIncident == null || !getIncident.Success)
                 return NotFound(new { message = "Incident not found." });
             return Ok(getIncident);
         }
 
         [HttpGet]
         [Authorize]
-        public async Task<IActionResult> GetAllIncidents()
+        public async Task<IActionResult> GetAllIncidents([FromQuery] string lang = "en")
         {
-            var getAllIncidents = await _IncidentSevice.GetIncidentAllAsync();
+            var getAllIncidents = await _IncidentSevice.GetIncidentAllAsync(lang);
             return Ok(getAllIncidents);
-
         }
 
         [HttpDelete("{id}")]
@@ -74,29 +73,28 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
         [HttpGet("filter")]
         [Authorize]
-        public async Task<IActionResult> GetFilteredIncidents(IncidentFilterRequest filter)
+        public async Task<IActionResult> GetFilteredIncidents(IncidentFilterRequest filter, [FromQuery] string lang = "en")
         {
-            var filteredIncidents = await _IncidentSevice.GetFilteredIncidentsAsync(filter);
+            var filteredIncidents = await _IncidentSevice.GetFilteredIncidentsAsync(filter, lang);
             return Ok(filteredIncidents);
-
         }
+
         [HttpGet("paged")]
         [Authorize]
-        public async Task<IActionResult> GetPagedIncidents([FromQuery] PaginationRequest paginationRequest)
+        public async Task<IActionResult> GetPagedIncidents([FromQuery] PaginationRequest paginationRequest, [FromQuery] string lang = "en")
         {
             if (paginationRequest.PageNumber < 1 || paginationRequest.PageSize < 1)
                 return BadRequest("Invalid pagination values");
 
-            var pagedIncidents = await _IncidentSevice.GetPagedIncidentsAsync(paginationRequest);
-
+            var pagedIncidents = await _IncidentSevice.GetPagedIncidentsAsync(paginationRequest, lang);
             return Ok(pagedIncidents);
         }
 
         [HttpGet("query")]
         [Authorize]
-        public async Task<IActionResult> GetIncidents([FromQuery] IncidentQueryRequest request)
+        public async Task<IActionResult> GetIncidents([FromQuery] IncidentQueryRequest request, [FromQuery] string lang = "en")
         {
-            var result = await _IncidentSevice.GetFilteredPagedIncidentsAsync(request);
+            var result = await _IncidentSevice.GetFilteredPagedIncidentsAsync(request, lang);
             return Ok(result);
         }
     }

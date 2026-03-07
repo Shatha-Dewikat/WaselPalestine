@@ -10,12 +10,11 @@ namespace Wasel_Palestine.BLL.Service
     {
         Task<IncidentResponse> CreateIncidentAsync(CreateIncidentRequest request, string userId);
         Task<IncidentResponse> UpdateIncidentAsync(int id, UpdateIncidentRequest request);
-        Task<IncidentResponse> GetIncidentByIdAsync(int id);
-        Task<List<IncidentResponse>> GetIncidentAllAsync();
-
+        Task<IncidentResponse> GetIncidentByIdAsync(int id, string lang = "en");
+        Task<List<IncidentResponse>> GetIncidentAllAsync(string lang = "en");
         Task<IncidentResponse> DeleteIncidentAsync(int id);
-        Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter);
-        Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest paginationRequest);
-        Task<List<IncidentResponse>> GetFilteredPagedIncidentsAsync(IncidentQueryRequest request);
+        Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter, string lang = "en");
+        Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest paginationRequest, string lang = "en");
+        Task<List<IncidentResponse>> GetFilteredPagedIncidentsAsync(IncidentQueryRequest request, string lang = "en");
     }
 }

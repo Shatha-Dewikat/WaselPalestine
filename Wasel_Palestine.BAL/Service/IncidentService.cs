@@ -93,18 +93,17 @@ namespace Wasel_Palestine.BLL.Service
             };
         }
 
-        public async Task<IncidentResponse> GetIncidentByIdAsync(int id)
+        public async Task<IncidentResponse> GetIncidentByIdAsync(int id, string lang = "en")
         {
             var incident = await _incidentRepo.GetByIdAsync(id);
             if (incident == null)
-            {
                 return new IncidentResponse { Success = false, Message = "Incident not found" };
-            }
-            var response = new IncidentResponse
+
+            return new IncidentResponse
             {
                 Id = incident.Id,
-                Title = incident.Title,
-                Description = incident.Description,
+                Title = lang == "ar" ? incident.TitleAr : incident.Title,
+                Description = lang == "ar" ? incident.DescriptionAr : incident.Description,
                 Category = incident.Category?.Name,
                 Severity = incident.Severity?.Name,
                 Status = incident.Status?.Name,
@@ -112,10 +111,9 @@ namespace Wasel_Palestine.BLL.Service
                 Longitude = (double)incident.Location.Longitude,
                 CreatedAt = incident.CreatedAt
             };
-            return response;
         }
 
-        public async Task<List<IncidentResponse>> GetIncidentAllAsync()
+        public async Task<List<IncidentResponse>> GetIncidentAllAsync(string lang = "en")
         {
             var incidents = await _incidentRepo.GetAllAsync();
             var response = new List<IncidentResponse>();
@@ -124,8 +122,8 @@ namespace Wasel_Palestine.BLL.Service
                 response.Add(new IncidentResponse
                 {
                     Id = incident.Id,
-                    Title = incident.Title,
-                    Description = incident.Description,
+                    Title = lang == "ar" ? incident.TitleAr : incident.Title,
+                    Description = lang == "ar" ? incident.DescriptionAr : incident.Description,
                     Category = incident.Category?.Name,
                     Severity = incident.Severity?.Name,
                     Status = incident.Status?.Name,
@@ -147,64 +145,14 @@ namespace Wasel_Palestine.BLL.Service
             await _incidentRepo.DeleteAsync(incident);
             return new IncidentResponse { Success = true, Message = "Incident deleted successfully" };
         }
-        public async Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter)
-        {
-            var incidents = await _incidentRepo.GetFilteredAsync(filter);
-
-            var response = new List<IncidentResponse>();
-
-            foreach (var incident in incidents)
-            {
-                response.Add(new IncidentResponse
-                {
-                    Id = incident.Id,
-                    Title = incident.Title,
-                    Description = incident.Description,
-                    Category = incident.Category?.Name,
-                    Severity = incident.Severity?.Name,
-                    Status = incident.Status?.Name,
-                    Latitude = (double)incident.Location.Latitude,
-                    Longitude = (double)incident.Location.Longitude,
-                    CreatedAt = incident.CreatedAt
-                });
-            }
-
-            return response;
-        }
-
-        public async Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest paginationRequest)
+        public async Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest paginationRequest, string lang = "en")
         {
             var incidents = await _incidentRepo.GetPagedAsync(paginationRequest);
-
-            var response = new List<IncidentResponse>();
-
-            foreach (var incident in incidents)
-            {
-                response.Add(new IncidentResponse
-                {
-                    Id = incident.Id,
-                    Title = incident.Title,
-                    Description = incident.Description,
-                    Category = incident.Category?.Name,
-                    Severity = incident.Severity?.Name,
-                    Status = incident.Status?.Name,
-                    Latitude = (double)incident.Location.Latitude,
-                    Longitude = (double)incident.Location.Longitude,
-                    CreatedAt = incident.CreatedAt
-                });
-            }
-
-            return response;
-        }
-
-        public async Task<List<IncidentResponse>> GetFilteredPagedIncidentsAsync(IncidentQueryRequest request)
-        {
-            var incidents = await _incidentRepo.GetFilteredPagedAsync(request);
             var response = incidents.Select(i => new IncidentResponse
             {
                 Id = i.Id,
-                Title = i.Title,
-                Description = i.Description,
+                Title = lang == "ar" ? i.TitleAr : i.Title,
+                Description = lang == "ar" ? i.DescriptionAr : i.Description,
                 Category = i.Category?.Name,
                 Severity = i.Severity?.Name,
                 Status = i.Status?.Name,
@@ -214,6 +162,40 @@ namespace Wasel_Palestine.BLL.Service
             }).ToList();
 
             return response;
+        }
+
+        public async Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter, string lang = "en")
+        {
+            var incidents = await _incidentRepo.GetFilteredAsync(filter);
+            return incidents.Select(i => new IncidentResponse
+            {
+                Id = i.Id,
+                Title = lang == "ar" ? i.TitleAr : i.Title,
+                Description = lang == "ar" ? i.DescriptionAr : i.Description,
+                Category = i.Category?.Name,
+                Severity = i.Severity?.Name,
+                Status = i.Status?.Name,
+                Latitude = (double)i.Location.Latitude,
+                Longitude = (double)i.Location.Longitude,
+                CreatedAt = i.CreatedAt
+            }).ToList();
+        }
+
+        public async Task<List<IncidentResponse>> GetFilteredPagedIncidentsAsync(IncidentQueryRequest request, string lang = "en")
+        {
+            var incidents = await _incidentRepo.GetFilteredPagedAsync(request);
+            return incidents.Select(i => new IncidentResponse
+            {
+                Id = i.Id,
+                Title = lang == "ar" ? i.TitleAr : i.Title,
+                Description = lang == "ar" ? i.DescriptionAr : i.Description,
+                Category = i.Category?.Name,
+                Severity = i.Severity?.Name,
+                Status = i.Status?.Name,
+                Latitude = (double)i.Location.Latitude,
+                Longitude = (double)i.Location.Longitude,
+                CreatedAt = i.CreatedAt
+            }).ToList();
         }
 
 

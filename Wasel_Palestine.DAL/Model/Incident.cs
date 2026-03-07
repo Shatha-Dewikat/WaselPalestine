@@ -10,6 +10,8 @@ namespace Wasel_Palestine.DAL.Model
         public string Title { get; set; }
         public string Description { get; set; }
 
+        public string TitleAr { get; set; }
+        public string DescriptionAr { get; set; }
         public int CategoryId { get; set; }
         public IncidentCategory Category { get; set; }
 
