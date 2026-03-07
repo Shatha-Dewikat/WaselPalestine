@@ -14,5 +14,5 @@
     <Folder Include="MapsterConfigration\" />
     <Folder Include="Service\" />
   </ItemGroup>
-
+  
 </Project>

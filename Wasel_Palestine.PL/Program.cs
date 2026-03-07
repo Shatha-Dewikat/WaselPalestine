@@ -1,4 +1,4 @@
-
+using Wasel_Palestine.BAL.Service;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Wasel_Palestine.DAL.Data;
@@ -20,8 +20,8 @@ namespace Wasel_Palestine.PL
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 
-            builder.Services.AddControllers();
-
+builder.Services.AddControllers().AddApplicationPart(typeof(Program).Assembly);
+          builder.Services.AddHttpClient<WeatherService>();
             builder.Services.AddScoped<RoleSeedData>();
             builder.Services.AddScoped<UserSeedData>();
             builder.Services.AddScoped<ReportStatusSeedData>();
@@ -63,7 +63,7 @@ namespace Wasel_Palestine.PL
                 app.MapOpenApi();
             }
 
-            app.UseHttpsRedirection();
+           // app.UseHttpsRedirection();
 
             app.UseAuthorization();
 

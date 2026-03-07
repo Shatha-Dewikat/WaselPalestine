@@ -1,7 +1,7 @@
 namespace Wasel_Palestine.PL.DTOs
 {
     
- public class WetherResponseDto
+ public class WeatherResponseDto
     {
         public double Latitude { get; set; }
         public double Longitude { get; set; }
