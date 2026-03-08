@@ -5,6 +5,7 @@ using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Repository;
 using Wasel_Palestine.DAL.Utils;
+
 using Mapster;
 
 
@@ -24,7 +25,7 @@ namespace Wasel_Palestine.PL
 
             
             builder.Services.AddControllers();
-
+            builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<RoleSeedData>();
             builder.Services.AddScoped<UserSeedData>();
             builder.Services.AddScoped<ReportStatusSeedData>();
@@ -36,6 +37,8 @@ namespace Wasel_Palestine.PL
             builder.Services.AddScoped<IIncidentService, IncidentService>();
 
             builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
+            builder.Services.AddScoped<IIncidentCategoryService, IncidentCategoryService>();
+            builder.Services.AddScoped<IIncidentCategoryRepository, IncidentCategoryRepository>();
 
             builder.Services.AddMapster();
             builder.Services.AddOpenApi();

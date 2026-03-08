@@ -34,7 +34,7 @@ namespace Wasel_Palestine.DAL.Data
         public DbSet<AlertSubscription> AlertSubscriptions { get; set; }
         public DbSet<AlertHistory> AlertHistories { get; set; }
         public DbSet<ExternalApiCache> ExternalApiCaches { get; set; }
-
+       
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {
@@ -45,7 +45,7 @@ namespace Wasel_Palestine.DAL.Data
             base.OnModelCreating(builder);
 
           
-          //  builder.Ignore<Microsoft.AspNetCore.Identity.IdentityPasskeyData>();
+        
             builder.Entity<User>().ToTable("AspNetUsers");
             builder.Entity<Role>().ToTable("AspNetRoles");
             builder.Entity<IdentityUserRole<string>>().ToTable("AspNetUserRoles");

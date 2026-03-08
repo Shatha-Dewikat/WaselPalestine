@@ -18,5 +18,7 @@ namespace Wasel_Palestine.DAL.Model
 
         public String ChangedByUserId { get; set; }
         public User ChangedByUser { get; set; }
+
+        public string Changes { get; set; }
     }
 }

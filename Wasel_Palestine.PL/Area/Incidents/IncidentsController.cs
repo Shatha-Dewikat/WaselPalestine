@@ -100,5 +100,12 @@ namespace Wasel_Palestine.PL.Area.Incidents
             var result = await _IncidentSevice.GetFilteredPagedIncidentsAsync(request, lang);
             return Ok(result);
         }
+
+        [HttpGet("{id}/history")]
+        public async Task<IActionResult> GetIncidentHistory(int id)
+        {
+            var history = await _IncidentSevice.GetIncidentHistoryAsync(id);
+            return Ok(history);
+        }
     }
 }
