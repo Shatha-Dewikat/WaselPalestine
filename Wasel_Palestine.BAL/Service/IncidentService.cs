@@ -1,62 +1,45 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Repository;
+using Microsoft.EntityFrameworkCore;
 
 namespace Wasel_Palestine.BLL.Service
 {
     public class IncidentService : IIncidentService
     {
         private readonly IIncidentRepository _incidentRepo;
+        private readonly ApplicationDbContext _context;
 
-        public IncidentService(IIncidentRepository incidentRepo)
+        public IncidentService(IIncidentRepository incidentRepo, ApplicationDbContext context)
         {
             _incidentRepo = incidentRepo;
+            _context = context;
         }
 
-
-        public async Task<IncidentResponse> UpdateIncidentAsync(int id, UpdateIncidentRequest request)
+        private async Task LogAuditAsync(string userId, string action, string entityName, int entityId, string details)
         {
-            try
+            var audit = new AuditLog
             {
-                var incident = await _incidentRepo.GetByIdAsync(id);
-                if (incident is null)
-                    return new IncidentResponse { Success = false, Message = "Incident not found" };
-
-                incident.Title = string.IsNullOrEmpty(request.Title) ? incident.Title : request.Title;
-                incident.Description = string.IsNullOrEmpty(request.Description) ? incident.Description : request.Description;
-                incident.CategoryId = request.CategoryId ?? incident.CategoryId;
-                incident.SeverityId = request.SeverityId ?? incident.SeverityId;
-                incident.StatusId = request.StatusId ?? incident.StatusId;
-
-                if (incident.Location == null) incident.Location = new Location();
-                incident.Location.Latitude = request.Latitude.HasValue ? (decimal)request.Latitude.Value : incident.Location.Latitude;
-                incident.Location.Longitude = request.Longitude.HasValue ? (decimal)request.Longitude.Value : incident.Location.Longitude;
-
-                await _incidentRepo.UpdateAsync(incident);
-
-                return new IncidentResponse
-                {
-                    Id = incident.Id,
-                    Title = incident.Title,
-                    Description = incident.Description,
-                    Category = incident.Category?.Name,
-                    Severity = incident.Severity?.Name,
-                    Status = incident.Status?.Name,
-                    Latitude = (double)incident.Location.Latitude,
-                    Longitude = (double)incident.Location.Longitude,
-                    CreatedAt = incident.CreatedAt
-                };
-            }
-            catch (Exception ex)
-            {
-                return new IncidentResponse { Success = false, Message = "An error occurred while updating the incident." };
-            }
+                UserId = userId,
+                Action = action,
+                EntityName = entityName,
+                EntityId = entityId,
+                Timestamp = DateTime.UtcNow,
+                Details = details,
+                IPAddress = "TODO",
+                UserAgent = "TODO"
+            };
+            _context.AuditLogs.Add(audit);
+            await _context.SaveChangesAsync();
         }
+
         public async Task<IncidentResponse> CreateIncidentAsync(CreateIncidentRequest request, string userId)
         {
             var location = new Location
@@ -71,13 +54,15 @@ namespace Wasel_Palestine.BLL.Service
                 Description = request.Description,
                 CategoryId = request.CategoryId,
                 SeverityId = request.SeverityId,
-                StatusId = 1, 
+                StatusId = 1,
                 Location = location,
                 CreatedByUserId = userId,
                 CreatedAt = DateTime.UtcNow
             };
 
             await _incidentRepo.AddAsync(incident);
+
+            await LogAuditAsync(userId, "Create", nameof(Incident), incident.Id, $"Created incident '{incident.Title}'");
 
             return new IncidentResponse
             {
@@ -91,6 +76,56 @@ namespace Wasel_Palestine.BLL.Service
                 Longitude = (double)location.Longitude,
                 CreatedAt = incident.CreatedAt
             };
+        }
+
+        public async Task<IncidentResponse> UpdateIncidentAsync(int id, UpdateIncidentRequest request, string userId)
+        {
+            var incident = await _incidentRepo.GetByIdAsync(id);
+            if (incident == null)
+                return new IncidentResponse { Success = false, Message = "Incident not found" };
+
+            var oldData = $"Title:{incident.Title}, Description:{incident.Description}, Status:{incident.StatusId}";
+
+            incident.Title = string.IsNullOrEmpty(request.Title) ? incident.Title : request.Title;
+            incident.Description = string.IsNullOrEmpty(request.Description) ? incident.Description : request.Description;
+            incident.CategoryId = request.CategoryId ?? incident.CategoryId;
+            incident.SeverityId = request.SeverityId ?? incident.SeverityId;
+            incident.StatusId = request.StatusId ?? incident.StatusId;
+
+            if (incident.Location == null) incident.Location = new Location();
+            incident.Location.Latitude = request.Latitude.HasValue ? (decimal)request.Latitude.Value : incident.Location.Latitude;
+            incident.Location.Longitude = request.Longitude.HasValue ? (decimal)request.Longitude.Value : incident.Location.Longitude;
+
+            await _incidentRepo.UpdateAsync(incident);
+
+            var newData = $"Title:{incident.Title}, Description:{incident.Description}, Status:{incident.StatusId}";
+            await LogAuditAsync(userId, "Update", nameof(Incident), incident.Id, $"Updated incident. Before: {oldData}. After: {newData}");
+
+            return new IncidentResponse
+            {
+                Id = incident.Id,
+                Title = incident.Title,
+                Description = incident.Description,
+                Category = incident.Category?.Name,
+                Severity = incident.Severity?.Name,
+                Status = incident.Status?.Name,
+                Latitude = (double)incident.Location.Latitude,
+                Longitude = (double)incident.Location.Longitude,
+                CreatedAt = incident.CreatedAt
+            };
+        }
+
+        public async Task<IncidentResponse> DeleteIncidentAsync(int id, string userId)
+        {
+            var incident = await _incidentRepo.GetByIdAsync(id);
+            if (incident == null)
+                return new IncidentResponse { Success = false, Message = "Incident not found" };
+
+            await _incidentRepo.DeleteAsync(incident);
+
+            await LogAuditAsync(userId, "Delete", nameof(Incident), incident.Id, $"Deleted incident '{incident.Title}'");
+
+            return new IncidentResponse { Success = true, Message = "Incident deleted successfully" };
         }
 
         public async Task<IncidentResponse> GetIncidentByIdAsync(int id, string lang = "en")
@@ -135,20 +170,10 @@ namespace Wasel_Palestine.BLL.Service
             return response;
         }
 
-        public async Task<IncidentResponse> DeleteIncidentAsync(int id)
-        {
-            var incident = await _incidentRepo.GetByIdAsync(id);
-            if (incident == null)
-            {
-                return new IncidentResponse { Success = false, Message = "Incident not found" };
-            }
-            await _incidentRepo.DeleteAsync(incident);
-            return new IncidentResponse { Success = true, Message = "Incident deleted successfully" };
-        }
         public async Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest paginationRequest, string lang = "en")
         {
             var incidents = await _incidentRepo.GetPagedAsync(paginationRequest);
-            var response = incidents.Select(i => new IncidentResponse
+            return incidents.Select(i => new IncidentResponse
             {
                 Id = i.Id,
                 Title = lang == "ar" ? i.TitleAr : i.Title,
@@ -160,8 +185,6 @@ namespace Wasel_Palestine.BLL.Service
                 Longitude = (double)i.Location.Longitude,
                 CreatedAt = i.CreatedAt
             }).ToList();
-
-            return response;
         }
 
         public async Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter, string lang = "en")
@@ -197,7 +220,5 @@ namespace Wasel_Palestine.BLL.Service
                 CreatedAt = i.CreatedAt
             }).ToList();
         }
-
-
     }
 }

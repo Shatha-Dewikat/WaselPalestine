@@ -30,11 +30,12 @@ namespace Wasel_Palestine.PL.Area.Incidents
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Moderator,Admin")]
-        public async Task<IActionResult> UpdateIncident(int id, UpdateIncidentRequest request)
+        public async Task<IActionResult> UpdateIncident(int id, [FromBody] UpdateIncidentRequest request)
         {
             try
             {
-                var updatedIncident = await _IncidentSevice.UpdateIncidentAsync(id, request);
+                var userId = User.FindFirst("UserId")?.Value; 
+                var updatedIncident = await _IncidentSevice.UpdateIncidentAsync(id, request, userId); 
                 return Ok(updatedIncident);
             }
             catch (KeyNotFoundException ex)
@@ -65,7 +66,9 @@ namespace Wasel_Palestine.PL.Area.Incidents
         [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> DeleteIncident(int id)
         {
-            var deletedIncident = await _IncidentSevice.DeleteIncidentAsync(id);
+            var userId = User.FindFirst("UserId")?.Value; 
+            var deletedIncident = await _IncidentSevice.DeleteIncidentAsync(id, userId); 
+
             if (!deletedIncident.Success)
                 return NotFound(new { message = deletedIncident.Message });
 

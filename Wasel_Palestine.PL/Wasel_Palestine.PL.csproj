@@ -28,7 +28,6 @@
 
   <ItemGroup>
     <Folder Include="Area\Auth\" />
-    <Folder Include="Area\Incidents\" />
     <Folder Include="Area\Alerts\" />
     <Folder Include="Area\Routes\" />
     <Folder Include="Area\Reports\" />

@@ -19,7 +19,6 @@
   <ItemGroup>
     <Folder Include="Migrations\" />
     <Folder Include="validations\" />
-    <Folder Include="Repository\" />
   </ItemGroup>
 
 </Project>
