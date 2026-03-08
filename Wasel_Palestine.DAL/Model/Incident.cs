@@ -15,7 +15,7 @@ namespace Wasel_Palestine.DAL.Model
 
         public int SeverityId { get; set; }
         public IncidentSeverity Severity { get; set; }
-
+       
         public int StatusId { get; set; }
         public IncidentStatus Status { get; set; }
 
@@ -42,6 +42,14 @@ namespace Wasel_Palestine.DAL.Model
 
         public List<IncidentHistory> IncidentHistories { get; set; }
         public List<IncidentMedia> IncidentMedia { get; set; }
+
+         public string TitleAr{get;set;}
+
+        public string DescriptionAr{get;set;}
+
+
         public List<Alert> Alerts { get; set; } = new List<Alert>();
+       
+
     }
 }
