@@ -1,9 +1,12 @@
-
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Utils;
+
 
 namespace Wasel_Palestine.PL
 {
@@ -13,63 +16,89 @@ namespace Wasel_Palestine.PL
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddIdentity<User, Role>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+            // DbContext
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+            // Identity + Lockout (Brute-force protection)
+            builder.Services.AddIdentity<User, Role>(options =>
+            {
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
 
-            builder.Services.AddControllers();
+            // JWT Authentication
+            var jwt = builder.Configuration.GetSection("Jwt");
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(opt =>
+                {
+                    opt.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = jwt["Issuer"],
+                        ValidAudience = jwt["Audience"],
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
+                        ClockSkew = TimeSpan.Zero
+                    };
+                });
 
+            // Authorization Policies
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
+                options.AddPolicy("ActiveUserOnly", p => p.RequireClaim("isActive", "true"));
+            });
+
+           builder.Services.AddControllers()
+    .AddApplicationPart(typeof(Wasel_Palestine.PL.Program).Assembly);
+
+            // Seeders
             builder.Services.AddScoped<RoleSeedData>();
             builder.Services.AddScoped<UserSeedData>();
             builder.Services.AddScoped<ReportStatusSeedData>();
 
-            builder.Services.AddScoped<ISeedData, RoleSeedData>();
-            builder.Services.AddScoped<ISeedData, UserSeedData>();
-            builder.Services.AddScoped<ISeedData, ReportStatusSeedData>();
+            // Utilities (بنضيفهم هسا عشان auth يشتغل)
+            builder.Services.AddScoped<TokenService>();
+            builder.Services.AddScoped<AuditLogger>();
 
-
-
-
+            // OpenAPI
             builder.Services.AddOpenApi();
 
             var app = builder.Build();
+
             app.UseStaticFiles();
-            app.UseHttpsRedirection();
+           // app.UseHttpsRedirection();
+
             app.UseAuthentication();
             app.UseAuthorization();
+
+            // Seed Data
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
 
-                // أولاً نضيف Roles
                 var roleSeeder = services.GetRequiredService<RoleSeedData>();
                 await roleSeeder.DataSeed();
 
-                // بعدين نضيف Users
                 var userSeeder = services.GetRequiredService<UserSeedData>();
                 await userSeeder.DataSeed();
 
-                // وأخيراً أي Seeder آخر مثل ReportStatus
                 var statusSeeder = services.GetRequiredService<ReportStatusSeedData>();
                 await statusSeeder.DataSeed();
             }
 
-            // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
             }
 
-            app.UseHttpsRedirection();
-
-            app.UseAuthorization();
-
-
             app.MapControllers();
-
             app.Run();
         }
     }
