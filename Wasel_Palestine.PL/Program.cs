@@ -39,7 +39,14 @@ namespace Wasel_Palestine.PL
             builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
             builder.Services.AddScoped<IIncidentCategoryService, IncidentCategoryService>();
             builder.Services.AddScoped<IIncidentCategoryRepository, IncidentCategoryRepository>();
-
+            builder.Services.AddScoped<IIncidentHistoryRepository, IncidentHistoryRepository>();
+            builder.Services.AddScoped<IIncidentSeverityRepository, IncidentSeverityRepository>();
+            builder.Services.AddScoped<IIncidentSeverityService, IncidentSeverityService>();
+            builder.Services.AddScoped<IIncidentStatusRepository, IncidentStatusRepository>();
+            builder.Services.AddScoped<IIncidentStatusService, IncidentStatusService>();
+            builder.Services.AddScoped<IFileService, FileService>();
+            builder.Services.AddScoped<IIncidentMediaService, IncidentMediaService>();
+            builder.Services.AddScoped<IIncidentMediaRepository, IncidentMediaRepository>();
             builder.Services.AddMapster();
             builder.Services.AddOpenApi();
 
