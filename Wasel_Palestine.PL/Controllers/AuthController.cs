@@ -5,11 +5,14 @@ using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Utils;
 using Wasel_Palestine.PL.DTO.Auth;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Wasel_Palestine.PL.Controllers
 {
+    
     [ApiController]
     [Route("api/auth")]
+    [AllowAnonymous]
     public class AuthController : ControllerBase
     {
         private readonly UserManager<User> _userManager;
@@ -175,6 +178,7 @@ namespace Wasel_Palestine.PL.Controllers
             await _db.SaveChangesAsync();
             await _audit.LogAsync(userId, "REVOKE_ALL", "RefreshToken", 0, reason, GetIp(), GetUA());
         }
+        
 
         private string GetIp() => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         private string GetUA() => Request.Headers.UserAgent.ToString();

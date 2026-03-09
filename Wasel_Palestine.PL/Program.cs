@@ -79,8 +79,11 @@ Console.WriteLine($"JWT Issuer={jwt["Issuer"]} | Audience={jwt["Audience"]} | Ke
             });
 
             // Controllers
-            builder.Services.AddControllers()
-                .AddApplicationPart(typeof(Wasel_Palestine.PL.Program).Assembly);
+           builder.Services.AddControllers(options =>
+{
+    options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter("ActiveUserOnly"));
+})
+.AddApplicationPart(typeof(Wasel_Palestine.PL.Program).Assembly);
 
             // Seeders
             builder.Services.AddScoped<RoleSeedData>();
