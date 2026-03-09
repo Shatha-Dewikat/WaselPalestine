@@ -22,6 +22,7 @@ namespace Wasel_Palestine.PL
 
 builder.Services.AddControllers().AddApplicationPart(typeof(Program).Assembly);
           builder.Services.AddHttpClient<WeatherService>();
+          builder.Services.AddScoped<MobilityService>();
             builder.Services.AddScoped<RoleSeedData>();
             builder.Services.AddScoped<UserSeedData>();
             builder.Services.AddScoped<ReportStatusSeedData>();

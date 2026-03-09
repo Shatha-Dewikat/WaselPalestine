@@ -8,10 +8,11 @@ namespace Wasel_Palestine.PL.Area.Controllers
     public class MobilityController : ControllerBase
     {
         private readonly WeatherService _weatherService;
-
-        public MobilityController(WeatherService weatherService)
+       private readonly MobilityService _mobilityService;
+        public MobilityController(WeatherService weatherService, MobilityService mobilityService)
         {
             _weatherService = weatherService;
+            _mobilityService = mobilityService;
         }
 
         [HttpGet("weather")] 
@@ -20,5 +21,12 @@ namespace Wasel_Palestine.PL.Area.Controllers
             var result = await _weatherService.GetCurrentWeatherAsync(lat, lon);
             return Ok(result); 
         }
+
+        [HttpGet("estimate-route")]
+public async Task<IActionResult> GetRoute([FromQuery] double sLat, [FromQuery] double sLng, [FromQuery] double eLat, [FromQuery] double eLng)
+{
+    var route = await _mobilityService.EstimateRouteAsync(sLat, sLng, eLat, eLng);
+    return Ok(route);
+}
     }
 }
