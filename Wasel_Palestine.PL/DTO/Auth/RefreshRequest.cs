@@ -4,5 +4,6 @@ namespace Wasel_Palestine.PL.DTO.Auth
     {
         public string RefreshToken { get; set; } = "";
         public string? DeviceInfo { get; set; }
+        
     }
 }

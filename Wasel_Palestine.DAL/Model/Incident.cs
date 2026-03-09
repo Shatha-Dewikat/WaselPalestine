@@ -43,5 +43,8 @@ namespace Wasel_Palestine.DAL.Model
         public List<IncidentHistory> IncidentHistories { get; set; }
         public List<IncidentMedia> IncidentMedia { get; set; }
         public List<Alert> Alerts { get; set; } = new List<Alert>();
+         public string TitleAr { get; set; }
+ public string DescriptionAr { get; set; }
+
     }
 }
