@@ -57,7 +57,7 @@ Console.WriteLine($"JWT Issuer={jwt["Issuer"]} | Audience={jwt["Audience"]} | Ke
         }
     };
 
-    var jwt = builder.Configuration.GetSection("Jwt");
+    
     opt.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -93,6 +93,7 @@ Console.WriteLine($"JWT Issuer={jwt["Issuer"]} | Audience={jwt["Audience"]} | Ke
             // Utils
             builder.Services.AddScoped<TokenService>();
             builder.Services.AddScoped<AuditLogger>();
+            builder.Services.AddScoped<EmailService>();
 
             // OpenAPI
             builder.Services.AddOpenApi();

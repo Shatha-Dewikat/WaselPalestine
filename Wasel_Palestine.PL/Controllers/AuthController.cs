@@ -6,6 +6,8 @@ using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Utils;
 using Wasel_Palestine.PL.DTO.Auth;
 using Microsoft.AspNetCore.Authorization;
+using System.Text.Encodings.Web;
+
 
 using System.Security.Claims;
 
@@ -23,22 +25,25 @@ namespace Wasel_Palestine.PL.Controllers
         private readonly TokenService _tokenService;
         private readonly AuditLogger _audit;
         private readonly IConfiguration _config;
+        private readonly EmailService _email;
 
         public AuthController(
-            UserManager<User> userManager,
-            SignInManager<User> signInManager,
-            ApplicationDbContext db,
-            TokenService tokenService,
-            AuditLogger audit,
-            IConfiguration config)
-        {
-            _userManager = userManager;
-            _signInManager = signInManager;
-            _db = db;
-            _tokenService = tokenService;
-            _audit = audit;
-            _config = config;
-        }
+    UserManager<User> userManager,
+    SignInManager<User> signInManager,
+    ApplicationDbContext db,
+    TokenService tokenService,
+    AuditLogger audit,
+    IConfiguration config,
+    EmailService email)
+{
+    _userManager = userManager;
+    _signInManager = signInManager;
+    _db = db;
+    _tokenService = tokenService;
+    _audit = audit;
+    _config = config;
+    _email = email;
+}
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterRequest req)
@@ -65,8 +70,36 @@ namespace Wasel_Palestine.PL.Controllers
 
             await _audit.LogAsync(user.Id, "REGISTER", "User", 0, "User registered", GetIp(), GetUA());
 
-            return Ok(new { message = "Registered" });
+var emailToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+var confirmBase = _config["Frontend:ConfirmEmailUrl"] ?? "http://localhost:5034/api/auth/confirm-email";
+var confirmUrl =
+    $"{confirmBase}?userId={Uri.EscapeDataString(user.Id)}&token={Uri.EscapeDataString(emailToken)}";
+
+await _email.SendAsync(user.Email!, "Confirm your email",
+    $"<p>Please confirm your email:</p><a href='{confirmUrl}'>Confirm Email</a>");
+
+await _audit.LogAsync(user.Id, "CONFIRM_EMAIL_SENT", "User", 0, "Confirmation email sent", GetIp(), GetUA());
+
+           return Ok(new { message = "Registered. Please check your email to confirm." });
+
+            
         }
+
+
+        [HttpGet("confirm-email")]
+public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
+{
+    var user = await _userManager.FindByIdAsync(userId);
+    if (user == null) return BadRequest("Invalid user");
+
+    var result = await _userManager.ConfirmEmailAsync(user, token);
+    if (!result.Succeeded) return BadRequest(result.Errors);
+
+    await _audit.LogAsync(user.Id, "CONFIRM_EMAIL", "User", 0, "Email confirmed", GetIp(), GetUA());
+    return Ok(new { message = "Email confirmed successfully" });
+}
+
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest req)
@@ -74,6 +107,8 @@ namespace Wasel_Palestine.PL.Controllers
             var user = await _userManager.FindByEmailAsync(req.Email);
             if (user == null) return Unauthorized("Invalid credentials");
             if (!user.IsActive) return Unauthorized("User is deactivated");
+            if (!user.EmailConfirmed)
+    return Unauthorized("Email not confirmed");
 
             var signIn = await _signInManager.PasswordSignInAsync(user, req.Password, false, lockoutOnFailure: true);
             if (!signIn.Succeeded) return Unauthorized("Invalid credentials");
@@ -253,5 +288,69 @@ public async Task<IActionResult> RevokeSession(int refreshTokenId)
 
     return Ok(new { message = "Session revoked" });
 }
+[HttpPost("forgot-password")]
+public async Task<IActionResult> ForgotPassword(Wasel_Palestine.PL.DTO.Auth.ForgotPasswordRequest req)
+{
+    var user = await _userManager.FindByEmailAsync(req.Email);
+
+    // ما نكشف إذا الإيميل موجود أو لا
+    if (user == null)
+        return Ok(new { message = "If the email exists, a reset link was sent." });
+
+    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+    var resetUrlBase = _config["Frontend:ResetPasswordUrl"] ?? "http://localhost:3000/reset-password";
+    var resetUrl =
+        $"{resetUrlBase}?email={Uri.EscapeDataString(req.Email)}&token={Uri.EscapeDataString(token)}";
+
+    // إذا SMTP مش متجهز، رجّع token للتجربة فقط (Development)
+    try
+    {
+        await _email.SendAsync(req.Email, "Reset your password",
+            $"<p>Click to reset your password:</p><a href='{resetUrl}'>Reset Password</a>");
+    }
+    catch
+    {
+        if (HttpContext.RequestServices.GetService<IHostEnvironment>()?.IsDevelopment() == true)
+        {
+            return Ok(new
+            {
+                message = "DEV MODE: Email not configured. Use token below.",
+                email = req.Email,
+                token = token
+            });
+        }
+
+        throw;
+    }
+
+    await _audit.LogAsync(user.Id, "FORGOT_PASSWORD", "User", 0, "Password reset requested", GetIp(), GetUA());
+    return Ok(new { message = "If the email exists, a reset link was sent." });
+}
+
+[HttpPost("reset-password")]
+public async Task<IActionResult> ResetPassword(Wasel_Palestine.PL.DTO.Auth.ResetPasswordRequest req)
+{
+    var user = await _userManager.FindByEmailAsync(req.Email);
+    if (user == null) return BadRequest("Invalid request");
+
+    var result = await _userManager.ResetPasswordAsync(user, req.Token, req.NewPassword);
+    if (!result.Succeeded) return BadRequest(result.Errors);
+
+    // revoke كل refresh tokens (logout all devices)
+    var tokens = await _db.RefreshTokens.Where(t => t.UserId == user.Id && !t.IsRevoked).ToListAsync();
+    foreach (var t in tokens)
+    {
+        t.IsRevoked = true;
+        t.RevokedAt = DateTime.UtcNow;
+        t.ReplacedByToken = "Password reset";
+    }
+    await _db.SaveChangesAsync();
+
+    await _audit.LogAsync(user.Id, "RESET_PASSWORD", "User", 0, "Password reset successful", GetIp(), GetUA());
+    return Ok(new { message = "Password updated" });
+}
+
+
     }
 }
