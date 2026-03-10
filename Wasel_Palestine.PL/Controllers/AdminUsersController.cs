@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Utils;
 
@@ -14,11 +15,14 @@ namespace Wasel_Palestine.PL.Controllers
     {
         private readonly UserManager<User> _userManager;
         private readonly AuditLogger _audit;
+        private readonly ApplicationDbContext _db;   // ✅ جديد
 
-        public AdminUsersController(UserManager<User> userManager, AuditLogger audit)
+        // ✅ عدّلنا الكونستركتر عشان يدخل DbContext
+        public AdminUsersController(UserManager<User> userManager, AuditLogger audit, ApplicationDbContext db)
         {
             _userManager = userManager;
             _audit = audit;
+            _db = db;
         }
 
         // GET: /api/admin/users
@@ -92,10 +96,24 @@ namespace Wasel_Palestine.PL.Controllers
             user.IsActive = false;
             await _userManager.UpdateAsync(user);
 
-            await _audit.LogAsync(userId, "DEACTIVATE_USER", "Users", 0,
-                "User deactivated", GetIp(), GetUA());
+            // ✅ جديد: revoke كل refresh tokens (logout all devices)
+            var tokens = await _db.RefreshTokens
+                .Where(t => t.UserId == userId && !t.IsRevoked)
+                .ToListAsync();
 
-            return Ok(new { message = "User deactivated" });
+            foreach (var t in tokens)
+            {
+                t.IsRevoked = true;
+                t.RevokedAt = DateTime.UtcNow;
+                t.ReplacedByToken = "Deactivated by admin";
+            }
+
+            await _db.SaveChangesAsync();
+
+            await _audit.LogAsync(userId, "DEACTIVATE_USER", "Users", 0,
+                "User deactivated + sessions revoked", GetIp(), GetUA());
+
+            return Ok(new { message = "User deactivated + sessions revoked" });
         }
 
         // POST: /api/admin/users/{userId}/activate
