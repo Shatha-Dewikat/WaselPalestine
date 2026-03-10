@@ -54,6 +54,41 @@ namespace Wasel_Palestine.PL.Controllers
             return Ok(roles);
         }
 
+        // GET: /api/admin/users/{userId}/lockout
+[HttpGet("{userId}/lockout")]
+public async Task<IActionResult> GetLockoutStatus(string userId)
+{
+    var user = await _userManager.FindByIdAsync(userId);
+    if (user == null) return NotFound("User not found");
+
+    var locked = await _userManager.IsLockedOutAsync(user);
+
+    return Ok(new
+    {
+        user.Id,
+        user.Email,
+        lockedOut = locked,
+        lockoutEnd = user.LockoutEnd,
+        accessFailedCount = user.AccessFailedCount
+    });
+}
+
+      // POST: /api/admin/users/{userId}/unlock
+[HttpPost("{userId}/unlock")]
+public async Task<IActionResult> UnlockUser(string userId)
+{
+    var user = await _userManager.FindByIdAsync(userId);
+    if (user == null) return NotFound("User not found");
+
+    await _userManager.SetLockoutEndDateAsync(user, null);
+    await _userManager.ResetAccessFailedCountAsync(user);
+
+    await _audit.LogAsync(userId, "UNLOCK_USER", "Users", 0,
+        "Admin unlocked user + reset failed count", GetIp(), GetUA());
+
+    return Ok(new { message = "User unlocked" });
+}
+
         // POST: /api/admin/users/{userId}/roles/{roleName}
         [HttpPost("{userId}/roles/{roleName}")]
         public async Task<IActionResult> AssignRole(string userId, string roleName)
