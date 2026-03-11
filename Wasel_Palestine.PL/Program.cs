@@ -1,13 +1,14 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using Wasel_Palestine.BLL.Service;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Repository;
 using Wasel_Palestine.DAL.Utils;
-
 using Mapster;
-
 
 namespace Wasel_Palestine.PL
 {
@@ -17,15 +18,62 @@ namespace Wasel_Palestine.PL
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddIdentity<User, Role>()
-    .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+            // DbContext
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            
-            builder.Services.AddControllers();
+            // Identity
+            builder.Services.AddIdentity<User, Role>(options =>
+            {
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
+
+            // JWT
+            var jwt = builder.Configuration.GetSection("Jwt");
+
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(opt =>
+            {
+                opt.IncludeErrorDetails = true;
+
+                opt.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = jwt["Issuer"],
+                    ValidAudience = jwt["Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+
+            // Authorization
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
+                options.AddPolicy("ActiveUserOnly", p => p.RequireClaim("isActive", "true"));
+            });
+
+            // Controllers
+            builder.Services.AddControllers(options =>
+            {
+                options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter("ActiveUserOnly"));
+            });
+
             builder.Services.AddHttpContextAccessor();
+
+            // Seeders
             builder.Services.AddScoped<RoleSeedData>();
             builder.Services.AddScoped<UserSeedData>();
             builder.Services.AddScoped<ReportStatusSeedData>();
@@ -33,28 +81,40 @@ namespace Wasel_Palestine.PL
             builder.Services.AddScoped<ISeedData, RoleSeedData>();
             builder.Services.AddScoped<ISeedData, UserSeedData>();
             builder.Services.AddScoped<ISeedData, ReportStatusSeedData>();
-            
-            builder.Services.AddScoped<IIncidentService, IncidentService>();
 
-            builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
+            // Utils
+            builder.Services.AddScoped<TokenService>();
+            builder.Services.AddScoped<AuditLogger>();
+            builder.Services.AddScoped<EmailService>();
+
+            // Services
+            builder.Services.AddScoped<IIncidentService, IncidentService>();
             builder.Services.AddScoped<IIncidentCategoryService, IncidentCategoryService>();
+            builder.Services.AddScoped<IIncidentSeverityService, IncidentSeverityService>();
+            builder.Services.AddScoped<IIncidentStatusService, IncidentStatusService>();
+            builder.Services.AddScoped<IIncidentMediaService, IncidentMediaService>();
+            builder.Services.AddScoped<IFileService, FileService>();
+
+            // Repositories
+            builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
             builder.Services.AddScoped<IIncidentCategoryRepository, IncidentCategoryRepository>();
             builder.Services.AddScoped<IIncidentHistoryRepository, IncidentHistoryRepository>();
             builder.Services.AddScoped<IIncidentSeverityRepository, IncidentSeverityRepository>();
-            builder.Services.AddScoped<IIncidentSeverityService, IncidentSeverityService>();
             builder.Services.AddScoped<IIncidentStatusRepository, IncidentStatusRepository>();
-            builder.Services.AddScoped<IIncidentStatusService, IncidentStatusService>();
-            builder.Services.AddScoped<IFileService, FileService>();
-            builder.Services.AddScoped<IIncidentMediaService, IncidentMediaService>();
             builder.Services.AddScoped<IIncidentMediaRepository, IncidentMediaRepository>();
+
             builder.Services.AddMapster();
+
             builder.Services.AddOpenApi();
 
             var app = builder.Build();
+
             app.UseStaticFiles();
-            app.UseHttpsRedirection();
+
             app.UseAuthentication();
             app.UseAuthorization();
+
+            // Seed Data
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
@@ -65,24 +125,16 @@ namespace Wasel_Palestine.PL
                 var userSeeder = services.GetRequiredService<UserSeedData>();
                 await userSeeder.DataSeed();
 
-            
                 var statusSeeder = services.GetRequiredService<ReportStatusSeedData>();
                 await statusSeeder.DataSeed();
             }
 
-           
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
             }
 
-            app.UseHttpsRedirection();
-
-            app.UseAuthorization();
-
-
             app.MapControllers();
-
             app.Run();
         }
     }

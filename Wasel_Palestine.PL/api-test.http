@@ -1,0 +1,22 @@
+### OpenAPI (تأكد السيرفر شغال)
+GET http://localhost:5034/openapi/v1.json
+
+### Register
+POST http://localhost:5034/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Sara Test",
+  "email": "sara@test.com",
+  "password": "P@ssw0rd!"
+}
+
+### Login
+POST http://localhost:5034/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "sara@test.com",
+  "password": "P@ssw0rd!",
+  "deviceInfo": "VSCode-REST"
+}

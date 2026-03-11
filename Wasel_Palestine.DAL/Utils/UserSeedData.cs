@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 using Wasel_Palestine.DAL.Model;
 
 namespace Wasel_Palestine.DAL.Utils
@@ -15,42 +15,72 @@ namespace Wasel_Palestine.DAL.Utils
         {
             _userManager = userManager;
         }
+
         public async Task DataSeed()
         {
-            if (!await _userManager.Users.AnyAsync())
+            // ====== Ensure Admin user always exists ======
+            await EnsureUserWithRoleAsync(
+                userName: "DRabaya",
+                email: "d@gmail.com",
+                fullName: "Duha Rabaya",
+                password: "Admin@123",
+                roleName: "Admin"
+            );
+
+            // (Optional) Ensure other seed users too (Supervisor/User)
+            await EnsureUserWithRoleAsync(
+                userName: "Shatha_Dwikat",
+                email: "sdwikat93@gmail.com",
+                fullName: "Shatha Dwikat",
+                password: "Admin@123",
+                roleName: "Supervisor"
+            );
+
+            await EnsureUserWithRoleAsync(
+                userName: "Abed",
+                email: "a@gmail.com",
+                fullName: "Abed Edaily",
+                password: "Admin@123",
+                roleName: "User"
+            );
+        }
+
+        private async Task EnsureUserWithRoleAsync(string userName, string email, string fullName, string password, string roleName)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+
+            if (user == null)
             {
-                var user1 = new User
+                user = new User
                 {
-                    UserName = "Shatha_Dwikat",
-                    Email = "sdwikat93@gmail.com",
-                    FullName = "Shatha Dwikat",
-                    EmailConfirmed = true
+                    UserName = userName,
+                    Email = email,
+                    FullName = fullName,
+                    EmailConfirmed = true,
+
+                    // إذا عندك هالحقول بالموديل (واضح من DB عندك)
+                    IsActive = true,
+                    EmailVerified = true,
+                    CreatedAt = DateTime.UtcNow
                 };
 
-                var user2 = new User
-                {
-                    UserName = "DRabaya",
-                    Email = "d@gmail.com",
-                    FullName = "Duha Rabaya",
-                    EmailConfirmed = true
-                };
-
-                var user3 = new User
-                {
-                    UserName = "Abed",
-                    Email = "a@gmail.com",
-                    FullName = "Abed Edaily",
-                    EmailConfirmed = true
-                };
-
-                await _userManager.CreateAsync(user1, "Admin@123");
-                await _userManager.CreateAsync(user2, "Admin@123");
-                await _userManager.CreateAsync(user3, "Admin@123");
-
-                await _userManager.AddToRoleAsync(user1, "Supervisor");
-                await _userManager.AddToRoleAsync(user2, "Admin");
-                await _userManager.AddToRoleAsync(user3, "User");
+                var create = await _userManager.CreateAsync(user, password);
+                if (!create.Succeeded)
+                    throw new Exception($"Create user failed: {string.Join(" | ", create.Errors.Select(e => e.Description))}");
             }
+            else
+            {
+                // Ensure active
+                if (!user.IsActive)
+                {
+                    user.IsActive = true;
+                    await _userManager.UpdateAsync(user);
+                }
+            }
+
+            // Ensure role assigned
+            if (!await _userManager.IsInRoleAsync(user, roleName))
+                await _userManager.AddToRoleAsync(user, roleName);
         }
     }
 }
