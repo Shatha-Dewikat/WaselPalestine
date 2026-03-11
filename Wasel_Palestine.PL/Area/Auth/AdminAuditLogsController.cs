@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Wasel_Palestine.DAL.Data;
 
-namespace Wasel_Palestine.PL.Controllers
+namespace Wasel_Palestine.PL.Area.Auth
 {
     [ApiController]
     [Route("api/admin/auditlogs")]

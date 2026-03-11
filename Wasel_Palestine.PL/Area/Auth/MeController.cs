@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
-namespace Wasel_Palestine.PL.Controllers
+namespace Wasel_Palestine.PL.Area.Auth
 {
     [ApiController]
     [Route("api/me")]

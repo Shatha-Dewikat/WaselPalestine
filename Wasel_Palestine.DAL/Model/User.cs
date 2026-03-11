@@ -20,8 +20,14 @@ namespace Wasel_Palestine.DAL.Model
         public DateTime CreatedAt { get; set; }
 
         public DateTime? DeletedAt { get; set; }
+        public string? CodeResetPassword { get; set; }
 
-      
+        public DateTime? PasswordResetCodeExpiry { get; set; }
+
+        public string? RefreshToken { get; set; }
+
+        public DateTime RefreshTokenExpiryTime { get; set; }
+
         public List<UserRole> UserRoles { get; set; }
         public List<RefreshToken> RefreshTokens { get; set; }
         public List<UserSession> UserSessions { get; set; }

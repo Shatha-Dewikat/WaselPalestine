@@ -18,11 +18,11 @@ namespace Wasel_Palestine.PL
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // DbContext
+            // ----------------- DbContext -----------------
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            // Identity
+            // ----------------- Identity -----------------
             builder.Services.AddIdentity<User, Role>(options =>
             {
                 options.Lockout.AllowedForNewUsers = true;
@@ -32,14 +32,12 @@ namespace Wasel_Palestine.PL
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-            // JWT
+            // ----------------- JWT -----------------
             var jwt = builder.Configuration.GetSection("Jwt");
-
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
             })
             .AddJwtBearer(opt =>
             {
@@ -53,41 +51,33 @@ namespace Wasel_Palestine.PL
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = jwt["Issuer"],
                     ValidAudience = jwt["Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(jwt["SecretKey"]!)),
                     ClockSkew = TimeSpan.Zero
                 };
             });
 
-            // Authorization
+            // ----------------- Authorization -----------------
             builder.Services.AddAuthorization(options =>
             {
                 options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
                 options.AddPolicy("ActiveUserOnly", p => p.RequireClaim("isActive", "true"));
             });
 
-            // Controllers
+            // ----------------- Controllers -----------------
             builder.Services.AddControllers(options =>
             {
                 options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter("ActiveUserOnly"));
             });
 
+            // ----------------- DI Registrations -----------------
             builder.Services.AddHttpContextAccessor();
 
-            // Seeders
-            builder.Services.AddScoped<RoleSeedData>();
-            builder.Services.AddScoped<UserSeedData>();
-            builder.Services.AddScoped<ReportStatusSeedData>();
-
-            builder.Services.AddScoped<ISeedData, RoleSeedData>();
-            builder.Services.AddScoped<ISeedData, UserSeedData>();
-            builder.Services.AddScoped<ISeedData, ReportStatusSeedData>();
-
-            // Utils
-            builder.Services.AddScoped<TokenService>();
-            builder.Services.AddScoped<AuditLogger>();
-            builder.Services.AddScoped<EmailService>();
-
             // Services
+            builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+            builder.Services.AddScoped<ITokenService, TokenService>();
+            builder.Services.AddTransient<IEmailSender, EmailSender>(); // فقط DI، لا new داخل Service
+
             builder.Services.AddScoped<IIncidentService, IncidentService>();
             builder.Services.AddScoped<IIncidentCategoryService, IncidentCategoryService>();
             builder.Services.AddScoped<IIncidentSeverityService, IncidentSeverityService>();
@@ -103,14 +93,23 @@ namespace Wasel_Palestine.PL
             builder.Services.AddScoped<IIncidentStatusRepository, IncidentStatusRepository>();
             builder.Services.AddScoped<IIncidentMediaRepository, IncidentMediaRepository>();
 
-            builder.Services.AddMapster();
+            // Seeders
+            builder.Services.AddScoped<RoleSeedData>();
+            builder.Services.AddScoped<UserSeedData>();
+            builder.Services.AddScoped<ReportStatusSeedData>();
+            builder.Services.AddScoped<ISeedData, RoleSeedData>();
+            builder.Services.AddScoped<ISeedData, UserSeedData>();
+            builder.Services.AddScoped<ISeedData, ReportStatusSeedData>();
 
+            // Utils
+            builder.Services.AddScoped<AuditLogger>();
+            builder.Services.AddMapster();
             builder.Services.AddOpenApi();
 
+            // ----------------- Build & Run -----------------
             var app = builder.Build();
 
             app.UseStaticFiles();
-
             app.UseAuthentication();
             app.UseAuthorization();
 

@@ -20,7 +20,7 @@ namespace Wasel_Palestine.DAL.Utils
 
             foreach (var roleName in roles)
             {
-                if (!await _roleManager.RoleExistsAsync(roleName))
+               if (!await _roleManager.RoleExistsAsync(roleName))
                 {
                     var role = new Role
                     {
