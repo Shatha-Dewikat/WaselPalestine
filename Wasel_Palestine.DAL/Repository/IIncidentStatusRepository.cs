@@ -10,7 +10,7 @@ namespace Wasel_Palestine.DAL.Repository
         Task<IncidentStatus> AddAsync(IncidentStatus status);
 
         Task<IncidentStatus> UpdateAsync(IncidentStatus status);
-
+        Task<bool> ExistsByNameAsync(string name, int? excludeId = null);
         Task DeleteAsync(IncidentStatus status);
 
         Task<IncidentStatus> GetByIdAsync(int id);

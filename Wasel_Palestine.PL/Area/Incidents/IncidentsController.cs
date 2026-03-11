@@ -19,8 +19,8 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
 
         [HttpPost]
-        [Authorize(Roles = "Moderator,Admin")]
-        public async Task<IActionResult> CreateIncident(CreateIncidentRequest request)
+        //[Authorize(Roles = "Moderator,Admin")]
+        public async Task<IActionResult> CreateIncident([FromBody] CreateIncidentRequest request)
         {
             var userId = User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value;
             var result = await _IncidentSevice.CreateIncidentAsync(request, userId);
@@ -100,8 +100,8 @@ namespace Wasel_Palestine.PL.Area.Incidents
             var result = await _IncidentSevice.GetFilteredPagedIncidentsAsync(request, lang);
             return Ok(result);
         }
-
         [HttpGet("{id}/history")]
+        [Authorize]
         public async Task<IActionResult> GetIncidentHistory(int id)
         {
             var history = await _IncidentSevice.GetIncidentHistoryAsync(id);

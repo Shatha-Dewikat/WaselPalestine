@@ -20,7 +20,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
 
         [HttpPost]
-        [Authorize(Roles = "Moderator,Admin")]
+      //  [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> Create([FromBody] IncidentCategoryCreateRequest request)
         {
             var userId = User.FindFirst("UserId")?.Value;
@@ -29,7 +29,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Moderator,Admin")]
+       // [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] IncidentCategoryUpdateRequest request)
         {
             var userId = User.FindFirst("UserId")?.Value;
@@ -38,7 +38,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Moderator,Admin")]
+      //  [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var userId = User.FindFirst("UserId")?.Value;
@@ -47,7 +47,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
 
         [HttpPut("restore/{id}")]
-        [Authorize(Roles = "Moderator,Admin")]
+       // [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> Restore(int id)
         {
             var userId = User.FindFirst("UserId")?.Value;
@@ -56,7 +56,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
 
         [HttpGet("{id}")]
-        [Authorize]
+      //  [Authorize]
         public async Task<IActionResult> GetById(int id, [FromQuery] string lang = "en")
         {
             var category = await _incidentCategoryService.GetIncidentCategoryByIdAsync(id, lang);
@@ -65,7 +65,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
 
         [HttpGet]
-        [Authorize]
+       // [Authorize]
         public async Task<IActionResult> GetAll([FromQuery] string lang = "en")
         {
             var categories = await _incidentCategoryService.GetAllIncidentCategoriesAsync(lang);

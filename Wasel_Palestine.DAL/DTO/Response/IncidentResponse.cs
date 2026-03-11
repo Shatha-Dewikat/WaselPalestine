@@ -25,5 +25,11 @@ namespace Wasel_Palestine.DAL.DTO.Response
         public double Longitude { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+       
+        public List<IncidentHistoryResponse> History { get; set; } = new();
+
+       
+        public List<IncidentMediaResponse> Media { get; set; } = new();
     }
 }

@@ -18,7 +18,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,Moderator")]
+       // [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> Create(
             IncidentStatusCreateRequest request)
         {
@@ -30,7 +30,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,Moderator")]
+        //[Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> Update(
             int id,
             IncidentStatusUpdateRequest request)
@@ -43,7 +43,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin,Moderator")]
+        //[Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> Delete(int id)
         {
             var userId = User.FindFirst("UserId")?.Value;

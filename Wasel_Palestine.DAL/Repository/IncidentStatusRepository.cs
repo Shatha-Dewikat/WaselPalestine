@@ -29,7 +29,11 @@ namespace Wasel_Palestine.DAL.Repository
             await _context.SaveChangesAsync();
             return status;
         }
-
+        public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
+        {
+            return await _context.IncidentStatuses
+                .AnyAsync(s => s.Name.ToLower() == name.ToLower() && (!excludeId.HasValue || s.Id != excludeId.Value));
+        }
         public async Task DeleteAsync(IncidentStatus status)
         {
             _context.IncidentStatuses.Remove(status);

@@ -19,9 +19,14 @@ namespace Wasel_Palestine.BLL.Service
         }
 
         public async Task<IncidentSeverityResponse> CreateIncidentSeverityAsync(
-            IncidentSeverityCreateRequest request,
-            string userId)
+         IncidentSeverityCreateRequest request,
+         string userId)
         {
+            // تحقق إذا الاسم موجود مسبقاً
+            var exists = await _repository.ExistsByNameAsync(request.Name);
+            if (exists)
+                throw new InvalidOperationException($"Severity '{request.Name}' already exists.");
+
             var severity = new IncidentSeverity
             {
                 Name = request.Name
@@ -33,14 +38,18 @@ namespace Wasel_Palestine.BLL.Service
         }
 
         public async Task<IncidentSeverityResponse> UpdateIncidentSeverityAsync(
-            int id,
-            IncidentSeverityUpdateRequest request,
-            string userId)
+     int id,
+     IncidentSeverityUpdateRequest request,
+     string userId)
         {
             var severity = await _repository.GetByIdAsync(id);
 
             if (severity == null)
                 throw new KeyNotFoundException("Severity not found");
+
+            var exists = await _repository.ExistsByNameAsync(request.Name, excludeId: id);
+            if (exists)
+                throw new InvalidOperationException($"Severity '{request.Name}' already exists.");
 
             severity.Name = request.Name;
 

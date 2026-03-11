@@ -15,7 +15,11 @@ namespace Wasel_Palestine.DAL.Repository
         {
             _context = context;
         }
-
+        public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
+        {
+            return await _context.IncidentSeverities
+                .AnyAsync(s => s.Name.ToLower() == name.ToLower() && (!excludeId.HasValue || s.Id != excludeId.Value));
+        }
         public async Task<IncidentSeverity> AddAsync(IncidentSeverity severity)
         {
             _context.IncidentSeverities.Add(severity);

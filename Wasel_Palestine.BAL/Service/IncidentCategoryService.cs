@@ -21,6 +21,8 @@ namespace Wasel_Palestine.BLL.Service
 
         public async Task<IncidentCategoryResponse> CreateIncidentCategoryAsync(IncidentCategoryCreateRequest request, string userId)
         {
+            var actualUserId = userId ?? "SYSTEM"; // SYSTEM أو أي قيمة تجريبية
+                                                   // سيتم الحل عند تجهيز JWT في Controller لتمرير userId الحقيقي
             if (await _context.IncidentCategories.AnyAsync(c =>
                 c.Name == request.Name || c.NameAr == request.NameAr))
                 throw new ArgumentException("Category with same name already exists.");

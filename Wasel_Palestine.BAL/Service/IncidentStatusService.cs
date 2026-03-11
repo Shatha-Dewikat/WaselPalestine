@@ -19,9 +19,14 @@ namespace Wasel_Palestine.BLL.Service
         }
 
         public async Task<IncidentStatusResponse> CreateStatusAsync(
-            IncidentStatusCreateRequest request,
-            string userId)
+    IncidentStatusCreateRequest request,
+    string userId)
         {
+           
+            var exists = await _repository.ExistsByNameAsync(request.Name);
+            if (exists)
+                throw new InvalidOperationException($"Status '{request.Name}' already exists.");
+
             var status = new IncidentStatus
             {
                 Name = request.Name
@@ -33,14 +38,19 @@ namespace Wasel_Palestine.BLL.Service
         }
 
         public async Task<IncidentStatusResponse> UpdateStatusAsync(
-            int id,
-            IncidentStatusUpdateRequest request,
-            string userId)
+     int id,
+     IncidentStatusUpdateRequest request,
+     string userId)
         {
             var status = await _repository.GetByIdAsync(id);
 
             if (status == null)
                 throw new KeyNotFoundException("Status not found");
+
+            
+            var exists = await _repository.ExistsByNameAsync(request.Name, excludeId: id);
+            if (exists)
+                throw new InvalidOperationException($"Status '{request.Name}' already exists.");
 
             status.Name = request.Name;
 

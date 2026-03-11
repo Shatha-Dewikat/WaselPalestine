@@ -54,14 +54,20 @@ namespace Wasel_Palestine.BLL.Service
 
         public async Task<IncidentResponse> CreateIncidentAsync(CreateIncidentRequest request, string userId = null)
         {
+           
             userId ??= GetCurrentUserId();
 
+           
             var location = new Location
             {
                 Latitude = (decimal)request.Latitude,
-                Longitude = (decimal)request.Longitude
+                Longitude = (decimal)request.Longitude,
+                AreaName = request.AreaName,
+                City = request.City,
+                CreatedAt = DateTime.UtcNow
             };
 
+           
             var incident = new Incident
             {
                 Title = request.Title,
@@ -70,12 +76,14 @@ namespace Wasel_Palestine.BLL.Service
                 DescriptionAr = request.DescriptionAr,
                 CategoryId = request.CategoryId,
                 SeverityId = request.SeverityId,
-                StatusId = 1,
+                StatusId = 1, 
                 Location = location,
+                CheckpointId = request.CheckpointId,
                 CreatedByUserId = userId,
                 CreatedAt = DateTime.UtcNow
             };
 
+        
             await _incidentRepo.AddAsync(incident);
 
             _context.IncidentHistories.Add(new IncidentHistory
@@ -86,6 +94,7 @@ namespace Wasel_Palestine.BLL.Service
                 ChangedAt = DateTime.UtcNow
             });
 
+           
             await LogAuditAsync("Create", nameof(Incident), incident.Id, $"Created incident '{incident.Title}'");
 
             await _context.SaveChangesAsync();
@@ -98,6 +107,7 @@ namespace Wasel_Palestine.BLL.Service
                 Category = incident.Category?.Name,
                 Severity = incident.Severity?.Name,
                 Status = incident.Status?.Name,
+                Verified = false,
                 Latitude = (double)location.Latitude,
                 Longitude = (double)location.Longitude,
                 CreatedAt = incident.CreatedAt

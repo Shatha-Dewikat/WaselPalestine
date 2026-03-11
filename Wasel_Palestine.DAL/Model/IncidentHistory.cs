@@ -14,8 +14,8 @@ namespace Wasel_Palestine.DAL.Model
         public int StatusId { get; set; }
         public IncidentStatus Status { get; set; }
 
-        public DateTime ChangedAt { get; set; }
-
+        public DateTime ChangedAt { get; set; }//
+        public string Action { get; set; }
         public String ChangedByUserId { get; set; }
         public User ChangedByUser { get; set; }
 

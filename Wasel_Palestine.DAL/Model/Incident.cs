@@ -27,7 +27,7 @@ namespace Wasel_Palestine.DAL.Model
         public int? CheckpointId { get; set; }
         public Checkpoint Checkpoint { get; set; }
 
-        public string CreatedByUserId { get; set; }
+        public string? CreatedByUserId { get; set; }
         public User CreatedByUser { get; set; }
 
         public bool Verified { get; set; }
