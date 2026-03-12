@@ -8,16 +8,9 @@ namespace Wasel_Palestine.BLL.Service
 {
     public interface IIncidentStatusService
     {
-        Task<IncidentStatusResponse> CreateStatusAsync(
-            IncidentStatusCreateRequest request,
-            string userId);
-
-        Task<IncidentStatusResponse> UpdateStatusAsync(
-            int id,
-            IncidentStatusUpdateRequest request,
-            string userId);
-
-        Task DeleteStatusAsync(int id, string userId);
+        Task<IncidentStatusResponse> CreateStatusAsync(IncidentStatusCreateRequest request, string userId, string ip, string userAgent);
+        Task<IncidentStatusResponse> UpdateStatusAsync(int id, IncidentStatusUpdateRequest request, string userId, string ip, string userAgent);
+        Task DeleteStatusAsync(int id, string userId, string ip, string userAgent);
 
         Task<IncidentStatusResponse> GetStatusByIdAsync(int id);
 

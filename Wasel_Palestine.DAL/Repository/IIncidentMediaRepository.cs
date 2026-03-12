@@ -11,5 +11,6 @@ namespace Wasel_Palestine.DAL.Repository
         Task DeleteAsync(IncidentMedia media);
         Task<List<IncidentMedia>> GetByIncidentIdAsync(int incidentId);
         Task<IncidentMedia> GetByIdAsync(int id);
+        Task GetAllAsync();
     }
 }

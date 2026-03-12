@@ -1,7 +1,8 @@
 ﻿using Mapster;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Threading.Tasks;
+using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
 using Wasel_Palestine.DAL.Model;
@@ -13,72 +14,136 @@ namespace Wasel_Palestine.BLL.Service
     {
         private readonly IIncidentSeverityRepository _repository;
 
-        public IncidentSeverityService(IIncidentSeverityRepository repository)
+        private readonly ApplicationDbContext _context;
+
+        public IncidentSeverityService(IIncidentSeverityRepository repository, ApplicationDbContext context)
         {
             _repository = repository;
+            _context = context;
         }
-
         public async Task<IncidentSeverityResponse> CreateIncidentSeverityAsync(
-         IncidentSeverityCreateRequest request,
-         string userId)
+            IncidentSeverityCreateRequest request,
+            string userId,
+            string ip,
+            string userAgent)
         {
-            // تحقق إذا الاسم موجود مسبقاً
-            var exists = await _repository.ExistsByNameAsync(request.Name);
-            if (exists)
+            if (await _repository.ExistsByNameAsync(request.Name))
                 throw new InvalidOperationException($"Severity '{request.Name}' already exists.");
 
-            var severity = new IncidentSeverity
+            var severity = new IncidentSeverity { Name = request.Name };
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                Name = request.Name
-            };
+                var result = await _repository.AddAsync(severity);
 
-            var result = await _repository.AddAsync(severity);
+                await _context.AuditLogs.AddAsync(new AuditLog
+                {
+                    UserId = userId,
+                    Action = "Create",
+                    EntityName = nameof(IncidentSeverity),
+                    EntityId = result.Id,
+                    Timestamp = DateTime.UtcNow,
+                    Details = $"Created severity: {result.Name}",
+                    IPAddress = ip,
+                    UserAgent = userAgent
+                });
 
-            return result.Adapt<IncidentSeverityResponse>();
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return result.Adapt<IncidentSeverityResponse>();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<IncidentSeverityResponse> UpdateIncidentSeverityAsync(
-     int id,
-     IncidentSeverityUpdateRequest request,
-     string userId)
+            int id,
+            IncidentSeverityUpdateRequest request,
+            string userId,
+            string ip,
+            string userAgent)
         {
             var severity = await _repository.GetByIdAsync(id);
-
-            if (severity == null)
-                throw new KeyNotFoundException("Severity not found");
-
-            var exists = await _repository.ExistsByNameAsync(request.Name, excludeId: id);
-            if (exists)
+            if (severity == null) throw new KeyNotFoundException("Severity not found");
+            if (await _repository.ExistsByNameAsync(request.Name, excludeId: id))
                 throw new InvalidOperationException($"Severity '{request.Name}' already exists.");
 
-            severity.Name = request.Name;
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                severity.Name = request.Name;
+                await _repository.UpdateAsync(severity);
 
-            await _repository.UpdateAsync(severity);
+                await _context.AuditLogs.AddAsync(new AuditLog
+                {
+                    UserId = userId,
+                    Action = "Update",
+                    EntityName = nameof(IncidentSeverity),
+                    EntityId = severity.Id,
+                    Timestamp = DateTime.UtcNow,
+                    Details = $"Updated severity to: {severity.Name}",
+                    IPAddress = ip,
+                    UserAgent = userAgent
+                });
 
-            return severity.Adapt<IncidentSeverityResponse>();
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return severity.Adapt<IncidentSeverityResponse>();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
-        public async Task DeleteIncidentSeverityAsync(int id, string userId)
+        public async Task DeleteIncidentSeverityAsync(int id, string userId, string ip, string userAgent)
         {
             var severity = await _repository.GetByIdAsync(id);
+            if (severity == null) throw new KeyNotFoundException("Severity not found");
 
-            if (severity == null)
-                throw new KeyNotFoundException("Severity not found");
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                await _repository.DeleteAsync(severity);
 
-            await _repository.DeleteAsync(severity);
+                await _context.AuditLogs.AddAsync(new AuditLog
+                {
+                    UserId = userId,
+                    Action = "Delete",
+                    EntityName = nameof(IncidentSeverity),
+                    EntityId = severity.Id,
+                    Timestamp = DateTime.UtcNow,
+                    Details = $"Deleted severity: {severity.Name}",
+                    IPAddress = ip,
+                    UserAgent = userAgent
+                });
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<IncidentSeverityResponse> GetIncidentSeverityByIdAsync(int id)
         {
             var severity = await _repository.GetByIdAsync(id);
-
             return severity?.Adapt<IncidentSeverityResponse>();
         }
 
         public async Task<List<IncidentSeverityResponse>> GetAllIncidentSeveritiesAsync()
         {
             var severities = await _repository.GetAllAsync();
-
             return severities.Adapt<List<IncidentSeverityResponse>>();
         }
     }

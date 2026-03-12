@@ -29,14 +29,18 @@ namespace Wasel_Palestine.BLL.Service
             var roles = await _userManager.GetRolesAsync(user);
 
             var claims = new List<Claim>
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                new Claim(ClaimTypes.Name, user.UserName),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
+    {
+        new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+         new Claim("UserId", user.Id),
+        new Claim(ClaimTypes.Name, user.UserName),
+        new Claim(ClaimTypes.Email, user.Email),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
 
-            // ✅ إضافة كل رول لحاله
+        // ⚡ Claim جديد للـ Policy
+        new Claim("isActive", user.IsActive ? "true" : "false")
+    };
+
+            // إضافة كل رول
             foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
@@ -51,19 +55,16 @@ namespace Wasel_Palestine.BLL.Service
                 SecurityAlgorithms.HmacSha256
             );
 
-
-
             var token = new JwtSecurityToken(
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(30), // أقصر مدة أأمن
+                expires: DateTime.UtcNow.AddMinutes(30),
                 signingCredentials: creds
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-
         public string GenerateRefreshToken()
         {
             var randomNumber = new byte[64];

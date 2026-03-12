@@ -129,7 +129,7 @@ namespace Wasel_Palestine.BLL.Service
 
                 var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-                // استخدم Base64Url فقط
+              
                 var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
                 var confirmationLink = $"http://localhost:5034/api/auth/Auth/ConfirmEmail?userId={user.Id}&token={encodedToken}";
@@ -265,6 +265,9 @@ namespace Wasel_Palestine.BLL.Service
             var decodedToken = Encoding.UTF8.GetString(decodedTokenBytes);
 
             var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
+            user.IsActive = true;    
+            user.EmailVerified = true; 
+            await _userManager.UpdateAsync(user);
             return result.Succeeded;
         }
         public async Task<ResetPasswordResponse> ResetPassword(ResetPasswordRequest request)
@@ -290,7 +293,7 @@ namespace Wasel_Palestine.BLL.Service
                     Success = false,
                     Message = "Code expired"
                 };
-         //   await _userManager.AddToRoleAsync(user, "User");
+         
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             var result = await _userManager.ResetPasswordAsync(user, token, request.NewPassword);
 

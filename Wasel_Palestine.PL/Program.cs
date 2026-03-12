@@ -57,26 +57,27 @@ namespace Wasel_Palestine.PL
                 };
             });
 
-            // ----------------- Authorization -----------------
+          
             builder.Services.AddAuthorization(options =>
             {
                 options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
+                options.AddPolicy("ModeratorOnly", p => p.RequireRole("Moderator"));
+                options.AddPolicy("AdminOrModerator", p => p.RequireRole("Admin", "Moderator"));
                 options.AddPolicy("ActiveUserOnly", p => p.RequireClaim("isActive", "true"));
             });
 
-            // ----------------- Controllers -----------------
             builder.Services.AddControllers(options =>
             {
                 options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter("ActiveUserOnly"));
             });
 
-            // ----------------- DI Registrations -----------------
+          
             builder.Services.AddHttpContextAccessor();
 
             // Services
             builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
             builder.Services.AddScoped<ITokenService, TokenService>();
-            builder.Services.AddTransient<IEmailSender, EmailSender>(); // فقط DI، لا new داخل Service
+            builder.Services.AddTransient<IEmailSender, EmailSender>(); 
 
             builder.Services.AddScoped<IIncidentService, IncidentService>();
             builder.Services.AddScoped<IIncidentCategoryService, IncidentCategoryService>();

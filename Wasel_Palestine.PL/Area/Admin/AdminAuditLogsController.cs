@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Wasel_Palestine.DAL.Data;
 
-namespace Wasel_Palestine.PL.Area.Auth
+namespace Wasel_Palestine.PL.Area.Admin
 {
     [ApiController]
     [Route("api/admin/auditlogs")]
@@ -17,7 +17,6 @@ namespace Wasel_Palestine.PL.Area.Auth
             _db = db;
         }
 
-        // GET: /api/admin/auditlogs?userId=&action=&from=&to=&take=100
         [HttpGet]
         public async Task<IActionResult> Get(
             [FromQuery] string? userId,

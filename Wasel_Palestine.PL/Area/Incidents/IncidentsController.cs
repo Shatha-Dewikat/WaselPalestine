@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
+using System.Threading.Tasks;
 using Wasel_Palestine.BLL.Service;
 using Wasel_Palestine.DAL.DTO.Request;
-using Wasel_Palestine.DAL.Model;
 
 namespace Wasel_Palestine.PL.Area.Incidents
 {
@@ -11,100 +12,106 @@ namespace Wasel_Palestine.PL.Area.Incidents
     [ApiController]
     public class IncidentsController : ControllerBase
     {
-        private readonly IIncidentService _IncidentSevice;
+        private readonly IIncidentService _incidentService;
 
-        public IncidentsController(IIncidentService IncidentSevice)
+        public IncidentsController(IIncidentService incidentService)
         {
-            _IncidentSevice = IncidentSevice;
+            _incidentService = incidentService;
         }
 
+        private string CurrentUserId => User?.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value;
+
+       
         [HttpPost]
-        //[Authorize(Roles = "Moderator,Admin")]
+        [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> CreateIncident([FromBody] CreateIncidentRequest request)
         {
-            var userId = User.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value;
-            var result = await _IncidentSevice.CreateIncidentAsync(request, userId);
+            var result = await _incidentService.CreateIncidentAsync(request, CurrentUserId);
             return Ok(result);
-
         }
 
+        
         [HttpPut("{id}")]
         [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> UpdateIncident(int id, [FromBody] UpdateIncidentRequest request)
         {
             try
             {
-                var userId = User.FindFirst("UserId")?.Value; 
-                var updatedIncident = await _IncidentSevice.UpdateIncidentAsync(id, request, userId); 
-                return Ok(updatedIncident);
+                var result = await _incidentService.UpdateIncidentAsync(id, request, CurrentUserId);
+                if (!result.Success) return NotFound(new { message = result.Message });
+                return Ok(result);
             }
-            catch (KeyNotFoundException ex)
+            catch
             {
-                return NotFound(new { message = ex.Message });
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An error occurred while updating the incident." });
             }
         }
 
+        
         [HttpGet("{id}")]
         [Authorize]
         public async Task<IActionResult> GetIncidentById(int id, [FromQuery] string lang = "en")
         {
-            var getIncident = await _IncidentSevice.GetIncidentByIdAsync(id, lang);
-            if (getIncident == null || !getIncident.Success)
-                return NotFound(new { message = "Incident not found." });
-            return Ok(getIncident);
+            var incident = await _incidentService.GetIncidentByIdAsync(id, lang);
+            if (incident == null || !incident.Success) return NotFound(new { message = "Incident not found." });
+            return Ok(incident);
         }
 
+       
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> GetAllIncidents([FromQuery] string lang = "en")
         {
-            var getAllIncidents = await _IncidentSevice.GetIncidentAllAsync(lang);
-            return Ok(getAllIncidents);
+            var incidents = await _incidentService.GetIncidentAllAsync(lang);
+            return Ok(incidents);
         }
 
+        
         [HttpDelete("{id}")]
         [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> DeleteIncident(int id)
         {
-            var userId = User.FindFirst("UserId")?.Value; 
-            var deletedIncident = await _IncidentSevice.DeleteIncidentAsync(id, userId); 
-
-            if (!deletedIncident.Success)
-                return NotFound(new { message = deletedIncident.Message });
-
-            return Ok(deletedIncident);
+            var result = await _incidentService.DeleteIncidentAsync(id, CurrentUserId);
+            if (!result.Success) return NotFound(new { message = result.Message });
+            return Ok(result);
         }
+
+        
         [HttpGet("filter")]
         [Authorize]
-        public async Task<IActionResult> GetFilteredIncidents(IncidentFilterRequest filter, [FromQuery] string lang = "en")
+        public async Task<IActionResult> GetFilteredIncidents([FromQuery] IncidentFilterRequest filter, [FromQuery] string lang = "en")
         {
-            var filteredIncidents = await _IncidentSevice.GetFilteredIncidentsAsync(filter, lang);
-            return Ok(filteredIncidents);
+            var incidents = await _incidentService.GetFilteredIncidentsAsync(filter, lang);
+            return Ok(incidents);
         }
 
+      
         [HttpGet("paged")]
         [Authorize]
         public async Task<IActionResult> GetPagedIncidents([FromQuery] PaginationRequest paginationRequest, [FromQuery] string lang = "en")
         {
             if (paginationRequest.PageNumber < 1 || paginationRequest.PageSize < 1)
-                return BadRequest("Invalid pagination values");
+                return BadRequest(new { message = "Invalid pagination values" });
 
-            var pagedIncidents = await _IncidentSevice.GetPagedIncidentsAsync(paginationRequest, lang);
-            return Ok(pagedIncidents);
+            var incidents = await _incidentService.GetPagedIncidentsAsync(paginationRequest, lang);
+            return Ok(incidents);
         }
 
+        
         [HttpGet("query")]
         [Authorize]
         public async Task<IActionResult> GetIncidents([FromQuery] IncidentQueryRequest request, [FromQuery] string lang = "en")
         {
-            var result = await _IncidentSevice.GetFilteredPagedIncidentsAsync(request, lang);
-            return Ok(result);
+            var incidents = await _incidentService.GetFilteredPagedIncidentsAsync(request, lang);
+            return Ok(incidents);
         }
+
+        
         [HttpGet("{id}/history")]
         [Authorize]
         public async Task<IActionResult> GetIncidentHistory(int id)
         {
-            var history = await _IncidentSevice.GetIncidentHistoryAsync(id);
+            var history = await _incidentService.GetIncidentHistoryAsync(id);
             return Ok(history);
         }
     }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 using Wasel_Palestine.BLL.Service;
 using Wasel_Palestine.DAL.DTO.Request;
 
@@ -19,26 +19,25 @@ namespace Wasel_Palestine.PL.Area.Incidents
 
         [HttpPost]
         [Authorize(Roles = "Admin,Moderator")]
-        public async Task<IActionResult> Create(
-            IncidentSeverityCreateRequest request)
+        public async Task<IActionResult> Create(IncidentSeverityCreateRequest request)
         {
             var userId = User.FindFirst("UserId")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
+            var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
 
-            var result = await _service.CreateIncidentSeverityAsync(request, userId);
-
+            var result = await _service.CreateIncidentSeverityAsync(request, userId, ip, userAgent);
             return Ok(result);
         }
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,Moderator")]
-        public async Task<IActionResult> Update(
-            int id,
-            IncidentSeverityUpdateRequest request)
+        public async Task<IActionResult> Update(int id, IncidentSeverityUpdateRequest request)
         {
             var userId = User.FindFirst("UserId")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
+            var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
 
-            var result = await _service.UpdateIncidentSeverityAsync(id, request, userId);
-
+            var result = await _service.UpdateIncidentSeverityAsync(id, request, userId, ip, userAgent);
             return Ok(result);
         }
 
@@ -47,9 +46,10 @@ namespace Wasel_Palestine.PL.Area.Incidents
         public async Task<IActionResult> Delete(int id)
         {
             var userId = User.FindFirst("UserId")?.Value;
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
+            var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
 
-            await _service.DeleteIncidentSeverityAsync(id, userId);
-
+            await _service.DeleteIncidentSeverityAsync(id, userId, ip, userAgent);
             return Ok(new { message = "Severity deleted successfully" });
         }
 
@@ -57,10 +57,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _service.GetIncidentSeverityByIdAsync(id);
-
-            if (result == null)
-                return NotFound();
-
+            if (result == null) return NotFound();
             return Ok(result);
         }
 
@@ -68,7 +65,6 @@ namespace Wasel_Palestine.PL.Area.Incidents
         public async Task<IActionResult> GetAll()
         {
             var result = await _service.GetAllIncidentSeveritiesAsync();
-
             return Ok(result);
         }
     }

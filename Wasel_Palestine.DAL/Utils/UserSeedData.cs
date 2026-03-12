@@ -18,7 +18,7 @@ namespace Wasel_Palestine.DAL.Utils
 
         public async Task DataSeed()
         {
-            // ====== Ensure Admin user always exists ======
+           
             await EnsureUserWithRoleAsync(
                 userName: "DRabaya",
                 email: "d@gmail.com",
@@ -27,13 +27,13 @@ namespace Wasel_Palestine.DAL.Utils
                 roleName: "Admin"
             );
 
-            // (Optional) Ensure other seed users too (Supervisor/User)
+          
             await EnsureUserWithRoleAsync(
                 userName: "Shatha_Dwikat",
                 email: "sdwikat93@gmail.com",
                 fullName: "Shatha Dwikat",
                 password: "Admin@123",
-                roleName: "Supervisor"
+                roleName: "Moderator"
             );
 
             await EnsureUserWithRoleAsync(
@@ -58,7 +58,6 @@ namespace Wasel_Palestine.DAL.Utils
                     FullName = fullName,
                     EmailConfirmed = true,
 
-                    // إذا عندك هالحقول بالموديل (واضح من DB عندك)
                     IsActive = true,
                     EmailVerified = true,
                     CreatedAt = DateTime.UtcNow
@@ -70,7 +69,7 @@ namespace Wasel_Palestine.DAL.Utils
             }
             else
             {
-                // Ensure active
+              
                 if (!user.IsActive)
                 {
                     user.IsActive = true;
@@ -78,7 +77,7 @@ namespace Wasel_Palestine.DAL.Utils
                 }
             }
 
-            // Ensure role assigned
+         
             if (!await _userManager.IsInRoleAsync(user, roleName))
                 await _userManager.AddToRoleAsync(user, roleName);
         }

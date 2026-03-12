@@ -1,10 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Wasel_Palestine.BLL.Service;
 using Wasel_Palestine.DAL.DTO.Request;
-using Wasel_Palestine.DAL.DTO.Response;
 
 namespace Wasel_Palestine.PL.Area.Incidents
 {
@@ -20,43 +18,55 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
 
         [HttpPost]
-      //  [Authorize(Roles = "Moderator,Admin")]
+        [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> Create([FromBody] IncidentCategoryCreateRequest request)
         {
             var userId = User.FindFirst("UserId")?.Value;
-            var category = await _incidentCategoryService.CreateIncidentCategoryAsync(request, userId);
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
+            var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
+
+            var category = await _incidentCategoryService.CreateIncidentCategoryAsync(request, userId, ip, userAgent);
             return Ok(category);
         }
 
         [HttpPut("{id}")]
-       // [Authorize(Roles = "Moderator,Admin")]
+        [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] IncidentCategoryUpdateRequest request)
         {
             var userId = User.FindFirst("UserId")?.Value;
-            var category = await _incidentCategoryService.UpdateIncidentCategoryAsync(id, request, userId);
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
+            var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
+
+            var category = await _incidentCategoryService.UpdateIncidentCategoryAsync(id, request, userId, ip, userAgent);
             return Ok(category);
         }
 
         [HttpDelete("{id}")]
-      //  [Authorize(Roles = "Moderator,Admin")]
+        [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var userId = User.FindFirst("UserId")?.Value;
-            await _incidentCategoryService.DeleteIncidentCategoryAsync(id, userId);
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
+            var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
+
+            await _incidentCategoryService.DeleteIncidentCategoryAsync(id, userId, ip, userAgent);
             return Ok(new { message = "Category deleted successfully." });
         }
 
         [HttpPut("restore/{id}")]
-       // [Authorize(Roles = "Moderator,Admin")]
+        [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> Restore(int id)
         {
             var userId = User.FindFirst("UserId")?.Value;
-            await _incidentCategoryService.RestoreIncidentCategoryAsync(id, userId);
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
+            var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
+
+            await _incidentCategoryService.RestoreIncidentCategoryAsync(id, userId, ip, userAgent);
             return Ok(new { message = "Category restored successfully." });
         }
 
         [HttpGet("{id}")]
-      //  [Authorize]
+        [Authorize]
         public async Task<IActionResult> GetById(int id, [FromQuery] string lang = "en")
         {
             var category = await _incidentCategoryService.GetIncidentCategoryByIdAsync(id, lang);
@@ -65,7 +75,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
         }
 
         [HttpGet]
-       // [Authorize]
+        [Authorize]
         public async Task<IActionResult> GetAll([FromQuery] string lang = "en")
         {
             var categories = await _incidentCategoryService.GetAllIncidentCategoriesAsync(lang);

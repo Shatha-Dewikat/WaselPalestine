@@ -6,18 +6,18 @@ using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Utils;
 
-namespace Wasel_Palestine.PL.Area.Auth
+namespace Wasel_Palestine.PL.Area.Admin
 {
     [ApiController]
     [Route("api/admin/users")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Policy = "AdminOrModerator")]
     public class AdminUsersController : ControllerBase
     {
         private readonly UserManager<User> _userManager;
         private readonly AuditLogger _audit;
-        private readonly ApplicationDbContext _db;   // ✅ جديد
+        private readonly ApplicationDbContext _db;   
 
-        // ✅ عدّلنا الكونستركتر عشان يدخل DbContext
+      
         public AdminUsersController(UserManager<User> userManager, AuditLogger audit, ApplicationDbContext db)
         {
             _userManager = userManager;
@@ -25,7 +25,7 @@ namespace Wasel_Palestine.PL.Area.Auth
             _db = db;
         }
 
-        // GET: /api/admin/users
+        
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -43,7 +43,6 @@ namespace Wasel_Palestine.PL.Area.Auth
             return Ok(users);
         }
 
-        // GET: /api/admin/users/{userId}/roles
         [HttpGet("{userId}/roles")]
         public async Task<IActionResult> GetRoles(string userId)
         {
@@ -54,7 +53,7 @@ namespace Wasel_Palestine.PL.Area.Auth
             return Ok(roles);
         }
 
-        // GET: /api/admin/users/{userId}/lockout
+        
 [HttpGet("{userId}/lockout")]
 public async Task<IActionResult> GetLockoutStatus(string userId)
 {
@@ -73,7 +72,7 @@ public async Task<IActionResult> GetLockoutStatus(string userId)
     });
 }
 
-      // POST: /api/admin/users/{userId}/unlock
+   
 [HttpPost("{userId}/unlock")]
 public async Task<IActionResult> UnlockUser(string userId)
 {
@@ -89,7 +88,7 @@ public async Task<IActionResult> UnlockUser(string userId)
     return Ok(new { message = "User unlocked" });
 }
 
-        // POST: /api/admin/users/{userId}/roles/{roleName}
+       
         [HttpPost("{userId}/roles/{roleName}")]
         public async Task<IActionResult> AssignRole(string userId, string roleName)
         {
@@ -105,7 +104,7 @@ public async Task<IActionResult> UnlockUser(string userId)
             return Ok(new { message = $"Role '{roleName}' assigned" });
         }
 
-        // DELETE: /api/admin/users/{userId}/roles/{roleName}
+      
         [HttpDelete("{userId}/roles/{roleName}")]
         public async Task<IActionResult> RemoveRole(string userId, string roleName)
         {
@@ -121,7 +120,6 @@ public async Task<IActionResult> UnlockUser(string userId)
             return Ok(new { message = $"Role '{roleName}' removed" });
         }
 
-        // POST: /api/admin/users/{userId}/deactivate
         [HttpPost("{userId}/deactivate")]
         public async Task<IActionResult> Deactivate(string userId)
         {
@@ -131,7 +129,7 @@ public async Task<IActionResult> UnlockUser(string userId)
             user.IsActive = false;
             await _userManager.UpdateAsync(user);
 
-            // ✅ جديد: revoke كل refresh tokens (logout all devices)
+         
             var tokens = await _db.RefreshTokens
                 .Where(t => t.UserId == userId && !t.IsRevoked)
                 .ToListAsync();
@@ -151,7 +149,7 @@ public async Task<IActionResult> UnlockUser(string userId)
             return Ok(new { message = "User deactivated + sessions revoked" });
         }
 
-        // POST: /api/admin/users/{userId}/activate
+      
         [HttpPost("{userId}/activate")]
         public async Task<IActionResult> Activate(string userId)
         {

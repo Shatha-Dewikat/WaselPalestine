@@ -18,24 +18,20 @@ namespace Wasel_Palestine.BLL.Service
         private readonly ApplicationDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public IncidentService(
-            IIncidentRepository incidentRepo,
-            ApplicationDbContext context,
-            IHttpContextAccessor httpContextAccessor)
+        public IncidentService(IIncidentRepository incidentRepo, ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
         {
             _incidentRepo = incidentRepo;
             _context = context;
             _httpContextAccessor = httpContextAccessor;
         }
 
-        private string GetCurrentUserId()
-        {
-            return _httpContextAccessor.HttpContext?.User?.FindFirst("UserId")?.Value;
-        }
+        private string GetCurrentUserId() => _httpContextAccessor.HttpContext?.User?.FindFirst("UserId")?.Value;
+        private string GetIP() => _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown";
+        private string GetUserAgent() => _httpContextAccessor.HttpContext?.Request?.Headers["User-Agent"].ToString() ?? "Unknown";
 
-        private Task LogAuditAsync(string action, string entityName, int entityId, string details)
+        private async Task LogAuditAsync(string action, string entityName, int entityId, string details)
         {
-            var audit = new AuditLog
+            _context.AuditLogs.Add(new AuditLog
             {
                 UserId = GetCurrentUserId(),
                 Action = action,
@@ -43,168 +39,172 @@ namespace Wasel_Palestine.BLL.Service
                 EntityId = entityId,
                 Timestamp = DateTime.UtcNow,
                 Details = details,
-                IPAddress = _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown",
-                UserAgent = _httpContextAccessor.HttpContext?.Request?.Headers["User-Agent"].ToString() ?? "Unknown"
-            };
-
-            _context.AuditLogs.Add(audit);
-
-            return Task.CompletedTask;
+                IPAddress = GetIP(),
+                UserAgent = GetUserAgent()
+            });
+            await Task.CompletedTask;
         }
-
-        public async Task<IncidentResponse> CreateIncidentAsync(CreateIncidentRequest request, string userId = null)
-        {
-           
-            userId ??= GetCurrentUserId();
-
-           
-            var location = new Location
-            {
-                Latitude = (decimal)request.Latitude,
-                Longitude = (decimal)request.Longitude,
-                AreaName = request.AreaName,
-                City = request.City,
-                CreatedAt = DateTime.UtcNow
-            };
-
-           
-            var incident = new Incident
-            {
-                Title = request.Title,
-                TitleAr = request.TitleAr,
-                Description = request.Description,
-                DescriptionAr = request.DescriptionAr,
-                CategoryId = request.CategoryId,
-                SeverityId = request.SeverityId,
-                StatusId = 1, 
-                Location = location,
-                CheckpointId = request.CheckpointId,
-                CreatedByUserId = userId,
-                CreatedAt = DateTime.UtcNow
-            };
 
         
-            await _incidentRepo.AddAsync(incident);
-
-            _context.IncidentHistories.Add(new IncidentHistory
-            {
-                IncidentId = incident.Id,
-                StatusId = incident.StatusId,
-                ChangedByUserId = userId,
-                ChangedAt = DateTime.UtcNow
-            });
-
-           
-            await LogAuditAsync("Create", nameof(Incident), incident.Id, $"Created incident '{incident.Title}'");
-
-            await _context.SaveChangesAsync();
-
-            return new IncidentResponse
-            {
-                Id = incident.Id,
-                Title = incident.Title,
-                Description = incident.Description,
-                Category = incident.Category?.Name,
-                Severity = incident.Severity?.Name,
-                Status = incident.Status?.Name,
-                Verified = false,
-                Latitude = (double)location.Latitude,
-                Longitude = (double)location.Longitude,
-                CreatedAt = incident.CreatedAt
-            };
-        }
-
-        public async Task<IncidentResponse> UpdateIncidentAsync(int id, UpdateIncidentRequest request, string userId = null)
+        public async Task<IncidentResponse> CreateIncidentAsync(CreateIncidentRequest request, string userId = null)
         {
             userId ??= GetCurrentUserId();
-
-            var incident = await _incidentRepo.GetByIdAsync(id);
-
-            if (incident == null)
-                return new IncidentResponse { Success = false, Message = "Incident not found" };
-
-            var oldStatusId = incident.StatusId;
-
-            var oldData = $"Title:{incident.Title}, Description:{incident.Description}, Status:{incident.StatusId}";
-
-            incident.Title = string.IsNullOrEmpty(request.Title) ? incident.Title : request.Title;
-            incident.TitleAr = string.IsNullOrEmpty(request.TitleAr) ? incident.TitleAr : request.TitleAr;
-            incident.Description = string.IsNullOrEmpty(request.Description) ? incident.Description : request.Description;
-            incident.DescriptionAr = string.IsNullOrEmpty(request.DescriptionAr) ? incident.DescriptionAr : request.DescriptionAr;
-
-            incident.CategoryId = request.CategoryId ?? incident.CategoryId;
-            incident.SeverityId = request.SeverityId ?? incident.SeverityId;
-            incident.StatusId = request.StatusId ?? incident.StatusId;
-
-            if (incident.Location == null)
-                incident.Location = new Location();
-
-            incident.Location.Latitude = request.Latitude.HasValue ? (decimal)request.Latitude.Value : incident.Location.Latitude;
-            incident.Location.Longitude = request.Longitude.HasValue ? (decimal)request.Longitude.Value : incident.Location.Longitude;
-
-            await _incidentRepo.UpdateAsync(incident);
-
-            if (request.StatusId.HasValue && request.StatusId.Value != oldStatusId)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
+                var location = new Location
+                {
+                    Latitude = (decimal)request.Latitude,
+                    Longitude = (decimal)request.Longitude,
+                    AreaName = request.AreaName,
+                    City = request.City,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var incident = new Incident
+                {
+                    Title = request.Title,
+                    TitleAr = request.TitleAr,
+                    Description = request.Description,
+                    DescriptionAr = request.DescriptionAr,
+                    CategoryId = request.CategoryId,
+                    SeverityId = request.SeverityId,
+                    StatusId = 1,
+                    Location = location,
+                    CheckpointId = request.CheckpointId,
+                    CreatedByUserId = userId,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _incidentRepo.AddAsync(incident);
+
                 _context.IncidentHistories.Add(new IncidentHistory
                 {
                     IncidentId = incident.Id,
-                    StatusId = request.StatusId.Value,
+                    StatusId = incident.StatusId,
                     ChangedByUserId = userId,
                     ChangedAt = DateTime.UtcNow
                 });
+
+                await LogAuditAsync("Create", nameof(Incident), incident.Id, $"Created incident '{incident.Title}'");
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new IncidentResponse
+                {
+                    Id = incident.Id,
+                    Title = incident.Title,
+                    Description = incident.Description,
+                    Category = incident.Category?.Name,
+                    Severity = incident.Severity?.Name,
+                    Status = incident.Status?.Name,
+                    Latitude = (double)location.Latitude,
+                    Longitude = (double)location.Longitude,
+                    CreatedAt = incident.CreatedAt
+                };
             }
-
-            var newData = $"Title:{incident.Title}, Description:{incident.Description}, Status:{incident.StatusId}";
-
-            await LogAuditAsync("Update", nameof(Incident), incident.Id,
-                $"Updated incident. Before: {oldData}. After: {newData}");
-
-            await _context.SaveChangesAsync();
-
-            return new IncidentResponse
+            catch
             {
-                Id = incident.Id,
-                Title = incident.Title,
-                Description = incident.Description,
-                Category = incident.Category?.Name,
-                Severity = incident.Severity?.Name,
-                Status = incident.Status?.Name,
-                Latitude = (double)incident.Location.Latitude,
-                Longitude = (double)incident.Location.Longitude,
-                CreatedAt = incident.CreatedAt
-            };
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
+       
+        public async Task<IncidentResponse> UpdateIncidentAsync(int id, UpdateIncidentRequest request, string userId = null)
+        {
+            userId ??= GetCurrentUserId();
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var incident = await _incidentRepo.GetByIdAsync(id);
+                if (incident == null)
+                    return new IncidentResponse { Success = false, Message = "Incident not found" };
+
+                var oldData = $"Title:{incident.Title}, Description:{incident.Description}, Status:{incident.StatusId}";
+
+                incident.Title = string.IsNullOrEmpty(request.Title) ? incident.Title : request.Title;
+                incident.TitleAr = string.IsNullOrEmpty(request.TitleAr) ? incident.TitleAr : request.TitleAr;
+                incident.Description = string.IsNullOrEmpty(request.Description) ? incident.Description : request.Description;
+                incident.DescriptionAr = string.IsNullOrEmpty(request.DescriptionAr) ? incident.DescriptionAr : request.DescriptionAr;
+                incident.CategoryId = request.CategoryId ?? incident.CategoryId;
+                incident.SeverityId = request.SeverityId ?? incident.SeverityId;
+                incident.StatusId = request.StatusId ?? incident.StatusId;
+
+                if (incident.Location == null) incident.Location = new Location();
+                incident.Location.Latitude = request.Latitude.HasValue ? (decimal)request.Latitude.Value : incident.Location.Latitude;
+                incident.Location.Longitude = request.Longitude.HasValue ? (decimal)request.Longitude.Value : incident.Location.Longitude;
+
+                await _incidentRepo.UpdateAsync(incident);
+
+                if (request.StatusId.HasValue && request.StatusId.Value != incident.StatusId)
+                {
+                    _context.IncidentHistories.Add(new IncidentHistory
+                    {
+                        IncidentId = incident.Id,
+                        StatusId = request.StatusId.Value,
+                        ChangedByUserId = userId,
+                        ChangedAt = DateTime.UtcNow
+                    });
+                }
+
+                var newData = $"Title:{incident.Title}, Description:{incident.Description}, Status:{incident.StatusId}";
+                await LogAuditAsync("Update", nameof(Incident), incident.Id, $"Before: {oldData}. After: {newData}");
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new IncidentResponse
+                {
+                    Id = incident.Id,
+                    Title = incident.Title,
+                    Description = incident.Description,
+                    Category = incident.Category?.Name,
+                    Severity = incident.Severity?.Name,
+                    Status = incident.Status?.Name,
+                    Latitude = (double)incident.Location.Latitude,
+                    Longitude = (double)incident.Location.Longitude,
+                    CreatedAt = incident.CreatedAt
+                };
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+       
         public async Task<IncidentResponse> DeleteIncidentAsync(int id, string userId = null)
         {
             userId ??= GetCurrentUserId();
-
-            var incident = await _incidentRepo.GetByIdAsync(id);
-
-            if (incident == null)
-                return new IncidentResponse { Success = false, Message = "Incident not found" };
-
-            await _incidentRepo.DeleteAsync(incident);
-
-            await LogAuditAsync("Delete", nameof(Incident), incident.Id,
-                $"Deleted incident '{incident.Title}'");
-
-            await _context.SaveChangesAsync();
-
-            return new IncidentResponse
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                Success = true,
-                Message = "Incident deleted successfully"
-            };
+                var incident = await _incidentRepo.GetByIdAsync(id);
+                if (incident == null)
+                    return new IncidentResponse { Success = false, Message = "Incident not found" };
+
+                await _incidentRepo.DeleteAsync(incident);
+                await LogAuditAsync("Delete", nameof(Incident), incident.Id, $"Deleted incident '{incident.Title}'");
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new IncidentResponse { Success = true, Message = "Incident deleted successfully" };
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<IncidentResponse> GetIncidentByIdAsync(int id, string lang = "en")
         {
             var incident = await _incidentRepo.GetByIdAsync(id);
-
-            if (incident == null)
-                return new IncidentResponse { Success = false, Message = "Incident not found" };
+            if (incident == null) return new IncidentResponse { Success = false, Message = "Incident not found" };
 
             return new IncidentResponse
             {
@@ -223,7 +223,6 @@ namespace Wasel_Palestine.BLL.Service
         public async Task<List<IncidentResponse>> GetIncidentAllAsync(string lang = "en")
         {
             var incidents = await _incidentRepo.GetAllAsync();
-
             return incidents.Select(i => new IncidentResponse
             {
                 Id = i.Id,
@@ -250,14 +249,12 @@ namespace Wasel_Palestine.BLL.Service
                     Status = h.Status.Name,
                     ChangedByUserId = h.ChangedByUserId,
                     ChangedAt = h.ChangedAt
-                })
-                .ToListAsync();
+                }).ToListAsync();
         }
 
-        public async Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest paginationRequest, string lang = "en")
+        public async Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter, string lang = "en")
         {
-            var incidents = await _incidentRepo.GetPagedAsync(paginationRequest);
-
+            var incidents = await _incidentRepo.GetFilteredAsync(filter);
             return incidents.Select(i => new IncidentResponse
             {
                 Id = i.Id,
@@ -272,10 +269,9 @@ namespace Wasel_Palestine.BLL.Service
             }).ToList();
         }
 
-        public async Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter, string lang = "en")
+        public async Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest pagination, string lang = "en")
         {
-            var incidents = await _incidentRepo.GetFilteredAsync(filter);
-
+            var incidents = await _incidentRepo.GetPagedAsync(pagination);
             return incidents.Select(i => new IncidentResponse
             {
                 Id = i.Id,
@@ -293,7 +289,6 @@ namespace Wasel_Palestine.BLL.Service
         public async Task<List<IncidentResponse>> GetFilteredPagedIncidentsAsync(IncidentQueryRequest request, string lang = "en")
         {
             var incidents = await _incidentRepo.GetFilteredPagedAsync(request);
-
             return incidents.Select(i => new IncidentResponse
             {
                 Id = i.Id,
