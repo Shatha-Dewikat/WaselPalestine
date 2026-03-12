@@ -23,6 +23,8 @@ namespace Wasel_Palestine.PL
 builder.Services.AddControllers().AddApplicationPart(typeof(Program).Assembly);
           builder.Services.AddHttpClient<WeatherService>();
           builder.Services.AddScoped<MobilityService>();
+          builder.Services.AddScoped<ReportingService>();
+
             builder.Services.AddScoped<RoleSeedData>();
             builder.Services.AddScoped<UserSeedData>();
             builder.Services.AddScoped<ReportStatusSeedData>();
@@ -35,7 +37,8 @@ builder.Services.AddControllers().AddApplicationPart(typeof(Program).Assembly);
 
 
             builder.Services.AddOpenApi();
-
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
             var app = builder.Build();
             app.UseStaticFiles();
             app.UseHttpsRedirection();
@@ -62,6 +65,8 @@ builder.Services.AddControllers().AddApplicationPart(typeof(Program).Assembly);
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
+                app.UseSwagger();
+                app.UseSwaggerUI();
             }
 
            // app.UseHttpsRedirection();
