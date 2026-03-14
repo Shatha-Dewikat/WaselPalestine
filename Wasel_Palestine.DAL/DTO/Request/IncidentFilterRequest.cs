@@ -10,8 +10,8 @@ namespace Wasel_Palestine.DAL.DTO.Request
         public int? CategoryId { get; set; }
         public int? SeverityId { get; set; }
         public int? StatusId { get; set; }
-
-        public Location? LocationName { get; set; }
-
+        public DateTime? DateFrom { get; set; }
+        public DateTime? DateTo { get; set; }
+        public string? LocationName { get; internal set; }
     }
 }

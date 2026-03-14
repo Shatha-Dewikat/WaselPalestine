@@ -14,6 +14,7 @@ namespace Wasel_Palestine.BLL.Service
 {
     public class IncidentService : IIncidentService
     {
+
         private readonly IIncidentRepository _incidentRepo;
         private readonly ApplicationDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
@@ -45,13 +46,25 @@ namespace Wasel_Palestine.BLL.Service
             await Task.CompletedTask;
         }
 
-        
+        #region Create / Update / Delete
         public async Task<IncidentResponse> CreateIncidentAsync(CreateIncidentRequest request, string userId = null)
         {
             userId ??= GetCurrentUserId();
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                // تحقق من التكرار
+                var exists = await _context.Incidents.AnyAsync(i => i.Title == request.Title);
+                if (exists)
+                {
+                    return new IncidentResponse
+                    {
+                        Success = false,
+                        Message = "Incident with the same title already exists",
+                        Errors = new List<string> { "Duplicate incident title" }
+                    };
+                }
+
                 var location = new Location
                 {
                     Latitude = (decimal)request.Latitude,
@@ -69,21 +82,28 @@ namespace Wasel_Palestine.BLL.Service
                     DescriptionAr = request.DescriptionAr,
                     CategoryId = request.CategoryId,
                     SeverityId = request.SeverityId,
-                    StatusId = 1,
+                    StatusId = 1, // Open
                     Location = location,
                     CheckpointId = request.CheckpointId,
+
                     CreatedByUserId = userId,
                     CreatedAt = DateTime.UtcNow
                 };
 
                 await _incidentRepo.AddAsync(incident);
 
+                await _context.Entry(incident).Reference(i => i.Category).LoadAsync();
+                await _context.Entry(incident).Reference(i => i.Severity).LoadAsync();
+                await _context.Entry(incident).Reference(i => i.Status).LoadAsync();
+
                 _context.IncidentHistories.Add(new IncidentHistory
                 {
                     IncidentId = incident.Id,
                     StatusId = incident.StatusId,
                     ChangedByUserId = userId,
-                    ChangedAt = DateTime.UtcNow
+                    ChangedAt = DateTime.UtcNow,
+                    Action = "Created",
+                    Changes = $"Title:{incident.Title}, Description:{incident.Description}, Status:{incident.StatusId}"
                 });
 
                 await LogAuditAsync("Create", nameof(Incident), incident.Id, $"Created incident '{incident.Title}'");
@@ -91,36 +111,41 @@ namespace Wasel_Palestine.BLL.Service
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return new IncidentResponse
-                {
-                    Id = incident.Id,
-                    Title = incident.Title,
-                    Description = incident.Description,
-                    Category = incident.Category?.Name,
-                    Severity = incident.Severity?.Name,
-                    Status = incident.Status?.Name,
-                    Latitude = (double)location.Latitude,
-                    Longitude = (double)location.Longitude,
-                    CreatedAt = incident.CreatedAt
-                };
+                return MapToResponse(incident);
             }
-            catch
+            catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                throw;
+                return new IncidentResponse
+                {
+                    Success = false,
+                    Message = "Failed to create incident",
+                    Errors = new List<string> { ex.Message }
+                };
             }
         }
 
-       
         public async Task<IncidentResponse> UpdateIncidentAsync(int id, UpdateIncidentRequest request, string userId = null)
         {
             userId ??= GetCurrentUserId();
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var incident = await _incidentRepo.GetByIdAsync(id);
+                var incident = await _context.Incidents
+                    .Include(i => i.Category)
+                    .Include(i => i.Severity)
+                    .Include(i => i.Status)
+                    .Include(i => i.IncidentMedia)
+                    .Include(i => i.Location)
+                    .FirstOrDefaultAsync(i => i.Id == id);
+
                 if (incident == null)
-                    return new IncidentResponse { Success = false, Message = "Incident not found" };
+                    return new IncidentResponse
+                    {
+                        Success = false,
+                        Message = "Incident not found",
+                        Errors = new List<string> { "Invalid incident ID" }
+                    };
 
                 var oldData = $"Title:{incident.Title}, Description:{incident.Description}, Status:{incident.StatusId}";
 
@@ -138,74 +163,243 @@ namespace Wasel_Palestine.BLL.Service
 
                 await _incidentRepo.UpdateAsync(incident);
 
-                if (request.StatusId.HasValue && request.StatusId.Value != incident.StatusId)
-                {
-                    _context.IncidentHistories.Add(new IncidentHistory
-                    {
-                        IncidentId = incident.Id,
-                        StatusId = request.StatusId.Value,
-                        ChangedByUserId = userId,
-                        ChangedAt = DateTime.UtcNow
-                    });
-                }
+                await _context.Entry(incident).Reference(i => i.Category).LoadAsync();
+                await _context.Entry(incident).Reference(i => i.Severity).LoadAsync();
+                await _context.Entry(incident).Reference(i => i.Status).LoadAsync();
 
-                var newData = $"Title:{incident.Title}, Description:{incident.Description}, Status:{incident.StatusId}";
-                await LogAuditAsync("Update", nameof(Incident), incident.Id, $"Before: {oldData}. After: {newData}");
+                _context.IncidentHistories.Add(new IncidentHistory
+                {
+                    IncidentId = incident.Id,
+                    StatusId = incident.StatusId,
+                    ChangedByUserId = userId,
+                    ChangedAt = DateTime.UtcNow,
+                    Action = "Updated",
+                    Changes = $"Before: {oldData}. After: Title:{incident.Title}, Description:{incident.Description}, Status:{incident.StatusId}"
+                });
+
+                await LogAuditAsync("Update", nameof(Incident), incident.Id, $"Before: {oldData}. After: Title:{incident.Title}, Description:{incident.Description}, Status:{incident.StatusId}");
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return new IncidentResponse
-                {
-                    Id = incident.Id,
-                    Title = incident.Title,
-                    Description = incident.Description,
-                    Category = incident.Category?.Name,
-                    Severity = incident.Severity?.Name,
-                    Status = incident.Status?.Name,
-                    Latitude = (double)incident.Location.Latitude,
-                    Longitude = (double)incident.Location.Longitude,
-                    CreatedAt = incident.CreatedAt
-                };
+                return MapToResponse(incident);
             }
-            catch
+            catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                throw;
+                return new IncidentResponse
+                {
+                    Success = false,
+                    Message = "Failed to update incident",
+                    Errors = new List<string> { ex.Message }
+                };
             }
         }
 
-       
         public async Task<IncidentResponse> DeleteIncidentAsync(int id, string userId = null)
         {
             userId ??= GetCurrentUserId();
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var incident = await _incidentRepo.GetByIdAsync(id);
+                var incident = await _context.Incidents
+                    .Include(i => i.Category)
+                    .Include(i => i.Severity)
+                    .Include(i => i.Status)
+                    .FirstOrDefaultAsync(i => i.Id == id);
+
                 if (incident == null)
-                    return new IncidentResponse { Success = false, Message = "Incident not found" };
+                    return new IncidentResponse
+                    {
+                        Success = false,
+                        Message = "Incident not found",
+                        Errors = new List<string> { "Invalid incident ID" }
+                    };
+
+                var oldData = $"Title:{incident.Title}, Description:{incident.Description}, Status:{incident.StatusId}";
 
                 await _incidentRepo.DeleteAsync(incident);
+
+                _context.IncidentHistories.Add(new IncidentHistory
+                {
+                    IncidentId = incident.Id,
+                    StatusId = incident.StatusId,
+                    ChangedByUserId = userId,
+                    ChangedAt = DateTime.UtcNow,
+                    Action = "Deleted",
+                    Changes = $"Before: {oldData}"
+                });
+
                 await LogAuditAsync("Delete", nameof(Incident), incident.Id, $"Deleted incident '{incident.Title}'");
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return new IncidentResponse { Success = true, Message = "Incident deleted successfully" };
+                return new IncidentResponse
+                {
+                    Success = true,
+                    Message = "Incident deleted successfully",
+                    Errors = new List<string>()
+                };
             }
-            catch
+            catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                throw;
+                return new IncidentResponse
+                {
+                    Success = false,
+                    Message = "Failed to delete incident",
+                    Errors = new List<string> { ex.Message }
+                };
             }
         }
+        #endregion
 
+        #region Get / GetAll / History
         public async Task<IncidentResponse> GetIncidentByIdAsync(int id, string lang = "en")
         {
-            var incident = await _incidentRepo.GetByIdAsync(id);
-            if (incident == null) return new IncidentResponse { Success = false, Message = "Incident not found" };
+            var incident = await _context.Incidents
+                .Include(i => i.Category)
+                .Include(i => i.Severity)
+                .Include(i => i.Status)
+                .Include(i => i.IncidentMedia)
+                .Include(i => i.Location)
+                .Include(i => i.IncidentHistories)
+                .FirstOrDefaultAsync(i => i.Id == id);
 
+            if (incident == null)
+                return new IncidentResponse
+                {
+                    Success = false,
+                    Message = "Incident not found",
+                    Errors = new List<string> { "Invalid incident ID" }
+                };
+
+            return MapToResponse(incident, lang);
+        }
+
+        public async Task<List<IncidentResponse>> GetIncidentAllAsync(string lang = "en")
+        {
+            var incidents = await _context.Incidents
+                .Include(i => i.Category)
+                .Include(i => i.Severity)
+                .Include(i => i.Status)
+                .Include(i => i.IncidentMedia)
+                .Include(i => i.Location)
+                .Include(i => i.IncidentHistories)
+                .ToListAsync();
+
+            return incidents.Select(i => MapToResponse(i, lang)).ToList();
+        }
+
+        public async Task<List<IncidentHistoryResponse>> GetIncidentHistoryAsync(int incidentId)
+        {
+            var histories = await _context.IncidentHistories
+                .Where(h => h.IncidentId == incidentId)
+                .OrderByDescending(h => h.ChangedAt)
+                .ToListAsync();
+
+            return histories.Select(h => new IncidentHistoryResponse
+            {
+                IncidentId = h.IncidentId,
+                StatusId = h.StatusId,
+                Action = h.Action,
+                Changes = h.Changes,
+                ChangedByUserId = h.ChangedByUserId,
+                ChangedAt = h.ChangedAt
+            }).ToList();
+        }
+        #endregion
+
+
+        #region Filtering / Pagination
+        public async Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter, string lang = "en")
+        {
+            var query = _context.Incidents
+                .Include(i => i.Category)
+                .Include(i => i.Severity)
+                .Include(i => i.IncidentMedia)
+                .Include(i => i.Status)
+                .Include(i => i.Location)
+                .AsQueryable();
+
+            if (filter.CategoryId.HasValue)
+                query = query.Where(i => i.CategoryId == filter.CategoryId.Value);
+
+            if (filter.SeverityId.HasValue)
+                query = query.Where(i => i.SeverityId == filter.SeverityId.Value);
+
+            if (filter.StatusId.HasValue)
+                query = query.Where(i => i.StatusId == filter.StatusId.Value);
+
+            if (filter.DateFrom.HasValue)
+                query = query.Where(i => i.CreatedAt >= filter.DateFrom.Value);
+
+            if (filter.DateTo.HasValue)
+                query = query.Where(i => i.CreatedAt <= filter.DateTo.Value);
+
+            var incidents = await query.ToListAsync();
+            return incidents.Select(i => MapToResponse(i, lang)).ToList();
+        }
+
+        public async Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest pagination, string lang = "en")
+        {
+            var query = _context.Incidents
+                .Include(i => i.Category)
+                .Include(i => i.Severity)
+                .Include(i => i.IncidentMedia)
+                .Include(i => i.Status)
+                .Include(i => i.Location)
+                .AsQueryable();
+
+            var incidents = await query
+                .Skip((pagination.PageNumber - 1) * pagination.PageSize)
+                .Take(pagination.PageSize)
+                .ToListAsync();
+
+            return incidents.Select(i => MapToResponse(i, lang)).ToList();
+        }
+
+        public async Task<List<IncidentResponse>> GetFilteredPagedIncidentsAsync(IncidentQueryRequest request, string lang = "en")
+        {
+            var query = _context.Incidents
+                .Include(i => i.Category)
+                .Include(i => i.Severity)
+                .Include(i => i.IncidentMedia)
+                .Include(i => i.Status)
+                .Include(i => i.Location)
+                .AsQueryable();
+
+            var filter = request.Filter;
+
+            if (filter.CategoryId.HasValue)
+                query = query.Where(i => i.CategoryId == filter.CategoryId.Value);
+
+            if (filter.SeverityId.HasValue)
+                query = query.Where(i => i.SeverityId == filter.SeverityId.Value);
+
+            if (filter.StatusId.HasValue)
+                query = query.Where(i => i.StatusId == filter.StatusId.Value);
+
+            if (filter.DateFrom.HasValue)
+                query = query.Where(i => i.CreatedAt >= filter.DateFrom.Value);
+
+            if (filter.DateTo.HasValue)
+                query = query.Where(i => i.CreatedAt <= filter.DateTo.Value);
+
+            var incidents = await query
+                .Skip((request.Pagination.PageNumber - 1) * request.Pagination.PageSize)
+                .Take(request.Pagination.PageSize)
+                .ToListAsync();
+
+            return incidents.Select(i => MapToResponse(i, lang)).ToList();
+        }
+        #endregion
+
+        #region Mapping
+        private IncidentResponse MapToResponse(Incident incident, string lang = "en")
+        {
+            var baseUrl = "http://localhost:5034";
             return new IncidentResponse
             {
                 Id = incident.Id,
@@ -214,93 +408,33 @@ namespace Wasel_Palestine.BLL.Service
                 Category = incident.Category?.Name,
                 Severity = incident.Severity?.Name,
                 Status = incident.Status?.Name,
-                Latitude = (double)incident.Location.Latitude,
-                Longitude = (double)incident.Location.Longitude,
-                CreatedAt = incident.CreatedAt
-            };
-        }
+                Latitude = incident.Location != null ? (double)incident.Location.Latitude : 0,
+                Longitude = incident.Location != null ? (double)incident.Location.Longitude : 0,
+                CreatedAt = incident.CreatedAt,
 
-        public async Task<List<IncidentResponse>> GetIncidentAllAsync(string lang = "en")
-        {
-            var incidents = await _incidentRepo.GetAllAsync();
-            return incidents.Select(i => new IncidentResponse
-            {
-                Id = i.Id,
-                Title = lang == "ar" ? i.TitleAr : i.Title,
-                Description = lang == "ar" ? i.DescriptionAr : i.Description,
-                Category = i.Category?.Name,
-                Severity = i.Severity?.Name,
-                Status = i.Status?.Name,
-                Latitude = (double)i.Location.Latitude,
-                Longitude = (double)i.Location.Longitude,
-                CreatedAt = i.CreatedAt
-            }).ToList();
-        }
+                History = incident.IncidentHistories?
+                            .Select(h => new IncidentHistoryResponse
+                            {
+                                Id = h.Id,
+                                StatusId = h.StatusId,
+                                ChangedByUserId = h.ChangedByUserId,
+                                ChangedAt = h.ChangedAt,
+                                Action = h.Action,
+                                Changes = h.Changes
+                            }).ToList()
+                            ?? new List<IncidentHistoryResponse>(),
 
-        public async Task<List<IncidentHistoryResponse>> GetIncidentHistoryAsync(int incidentId)
-        {
-            return await _context.IncidentHistories
-                .Include(h => h.Status)
-                .Where(h => h.IncidentId == incidentId)
-                .OrderByDescending(h => h.ChangedAt)
-                .Select(h => new IncidentHistoryResponse
+                Media = incident.IncidentMedia?.Select(m => new IncidentMediaResponse
                 {
-                    StatusId = h.StatusId,
-                    Status = h.Status.Name,
-                    ChangedByUserId = h.ChangedByUserId,
-                    ChangedAt = h.ChangedAt
-                }).ToListAsync();
-        }
+                    Id = m.Id,
+                    Url = $"{baseUrl}{m.Url}",
+                    CreatedAt = m.CreatedAt
+                }).ToList() ?? new List<IncidentMediaResponse>(),
 
-        public async Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter, string lang = "en")
-        {
-            var incidents = await _incidentRepo.GetFilteredAsync(filter);
-            return incidents.Select(i => new IncidentResponse
-            {
-                Id = i.Id,
-                Title = lang == "ar" ? i.TitleAr : i.Title,
-                Description = lang == "ar" ? i.DescriptionAr : i.Description,
-                Category = i.Category?.Name,
-                Severity = i.Severity?.Name,
-                Status = i.Status?.Name,
-                Latitude = (double)i.Location.Latitude,
-                Longitude = (double)i.Location.Longitude,
-                CreatedAt = i.CreatedAt
-            }).ToList();
-        }
+                Success = true
+            };
 
-        public async Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest pagination, string lang = "en")
-        {
-            var incidents = await _incidentRepo.GetPagedAsync(pagination);
-            return incidents.Select(i => new IncidentResponse
-            {
-                Id = i.Id,
-                Title = lang == "ar" ? i.TitleAr : i.Title,
-                Description = lang == "ar" ? i.DescriptionAr : i.Description,
-                Category = i.Category?.Name,
-                Severity = i.Severity?.Name,
-                Status = i.Status?.Name,
-                Latitude = (double)i.Location.Latitude,
-                Longitude = (double)i.Location.Longitude,
-                CreatedAt = i.CreatedAt
-            }).ToList();
         }
-
-        public async Task<List<IncidentResponse>> GetFilteredPagedIncidentsAsync(IncidentQueryRequest request, string lang = "en")
-        {
-            var incidents = await _incidentRepo.GetFilteredPagedAsync(request);
-            return incidents.Select(i => new IncidentResponse
-            {
-                Id = i.Id,
-                Title = lang == "ar" ? i.TitleAr : i.Title,
-                Description = lang == "ar" ? i.DescriptionAr : i.Description,
-                Category = i.Category?.Name,
-                Severity = i.Severity?.Name,
-                Status = i.Status?.Name,
-                Latitude = (double)i.Location.Latitude,
-                Longitude = (double)i.Location.Longitude,
-                CreatedAt = i.CreatedAt
-            }).ToList();
-        }
+        #endregion
     }
 }

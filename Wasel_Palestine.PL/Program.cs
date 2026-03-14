@@ -1,14 +1,15 @@
+using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Wasel_Palestine.BLL.MapsterConfigration;
 using Wasel_Palestine.BLL.Service;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Repository;
 using Wasel_Palestine.DAL.Utils;
-using Mapster;
 
 namespace Wasel_Palestine.PL
 {
@@ -108,6 +109,7 @@ namespace Wasel_Palestine.PL
             builder.Services.AddOpenApi();
 
             // ----------------- Build & Run -----------------
+            MapsterConfig.RegisterMappings();
             var app = builder.Build();
 
             app.UseStaticFiles();

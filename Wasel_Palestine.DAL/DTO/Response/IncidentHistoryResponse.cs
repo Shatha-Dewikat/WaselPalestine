@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Wasel_Palestine.DAL.DTO.Response
 {
-    public class IncidentHistoryResponse
+    public class IncidentHistoryResponse : BaseResponse
     {
         public int StatusId { get; set; }
         public string Status { get; set; }
@@ -12,5 +12,7 @@ namespace Wasel_Palestine.DAL.DTO.Response
         public DateTime ChangedAt { get; set; }
         public string Action { get; set; }
         public string Changes { get; set; }
+        public int IncidentId { get; set; }
+        public int Id { get; set; }
     }
 }

@@ -40,5 +40,10 @@ namespace Wasel_Palestine.DAL.Repository
         {
             return await _context.IncidentMedias.FindAsync(id);
         }
+
+        public Task GetAllAsync()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

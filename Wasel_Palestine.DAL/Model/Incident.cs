@@ -42,10 +42,10 @@ namespace Wasel_Palestine.DAL.Model
         public DateTime CreatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
 
-        public List<IncidentHistory> IncidentHistories { get; set; }
+       
         public List<IncidentMedia> IncidentMedia { get; set; }
         public List<Alert> Alerts { get; set; } = new List<Alert>();
-         
+        public virtual ICollection<IncidentHistory> IncidentHistories { get; set; } = new List<IncidentHistory>();
 
     }
 }

@@ -15,7 +15,8 @@ namespace Wasel_Palestine.DAL.DTO.Request
         public int? CategoryId { get; set; }
         public int? SeverityId { get; set; }
 
-       
+        public IncidentFilterRequest Filter { get; set; }
+        public PaginationRequest Pagination { get; set; }
         public string? SortBy { get; set; }
         public bool SortDesc { get; set; } = false;
     }
