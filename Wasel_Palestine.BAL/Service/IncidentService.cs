@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
@@ -53,7 +54,7 @@ namespace Wasel_Palestine.BLL.Service
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // تحقق من التكرار
+                
                 var exists = await _context.Incidents.AnyAsync(i => i.Title == request.Title);
                 if (exists)
                 {
@@ -73,7 +74,8 @@ namespace Wasel_Palestine.BLL.Service
                     City = request.City,
                     CreatedAt = DateTime.UtcNow
                 };
-
+                var openStatus = await _context.IncidentStatuses
+                .FirstOrDefaultAsync(s => s.Name == "Open");
                 var incident = new Incident
                 {
                     Title = request.Title,
@@ -82,7 +84,7 @@ namespace Wasel_Palestine.BLL.Service
                     DescriptionAr = request.DescriptionAr,
                     CategoryId = request.CategoryId,
                     SeverityId = request.SeverityId,
-                    StatusId = 1, // Open
+                    StatusId = openStatus.Id, // Open
                     Location = location,
                     CheckpointId = request.CheckpointId,
 
@@ -311,7 +313,162 @@ namespace Wasel_Palestine.BLL.Service
         }
         #endregion
 
+        public async Task<SimpleResponse> VerifyIncidentAsync(int incidentId, string userId)
+        {
+            try
+            {
+                var incident = await _context.Incidents.FindAsync(incidentId);
 
+                if (incident == null)
+                    return new SimpleResponse { Success = false, Message = "Incident not found", Errors = new List<string> { "Invalid incident ID" } };
+
+                var verifiedStatus = await _context.IncidentStatuses.FirstOrDefaultAsync(s => s.Name == "Verified");
+
+                if (verifiedStatus == null)
+                    return new SimpleResponse { Success = false, Message = "Verified status not found", Errors = new List<string> { "Verified status not configured in DB" } };
+
+                if (incident.StatusId == verifiedStatus.Id)
+                    return new SimpleResponse { Success = false, Message = "Incident already verified", Errors = new List<string> { "Duplicate verification attempt" } };
+
+                incident.StatusId = verifiedStatus.Id;
+                incident.Verified = true;
+                incident.VerifiedAt = DateTime.UtcNow;
+
+                // سجل في IncidentHistory
+                _context.IncidentHistories.Add(new IncidentHistory
+                {
+                    IncidentId = incident.Id,
+                    StatusId = verifiedStatus.Id,
+                    ChangedByUserId = userId,
+                    ChangedAt = DateTime.UtcNow,
+                    Action = "Verified",
+                    Changes = "Incident verified"
+                });
+
+                // سجل في AuditLog
+                await LogAuditAsync("Verify", nameof(Incident), incident.Id, $"Incident verified by user {userId}");
+
+                await _context.SaveChangesAsync();
+
+                return new SimpleResponse
+                {
+                    Success = true,
+                    Message = "Incident verified successfully",
+                    Errors = new List<string>()
+                };
+            }
+            catch (Exception ex)
+            {
+                return new SimpleResponse
+                {
+                    Success = false,
+                    Message = "Failed to verify incident",
+                    Errors = new List<string> { ex.Message }
+                };
+            }
+        }
+
+        public async Task<SimpleResponse> ResolveIncidentAsync(int incidentId, string userId)
+        {
+            try
+            {
+                var incident = await _context.Incidents.FindAsync(incidentId);
+
+                if (incident == null)
+                    return new SimpleResponse { Success = false, Message = "Incident not found", Errors = new List<string> { "Invalid incident ID" } };
+
+                var resolvedStatus = await _context.IncidentStatuses.FirstOrDefaultAsync(s => s.Name == "Resolved");
+
+                if (resolvedStatus == null)
+                    return new SimpleResponse { Success = false, Message = "Resolved status not found", Errors = new List<string> { "Resolved status not configured in DB" } };
+
+                if (incident.StatusId == resolvedStatus.Id)
+                    return new SimpleResponse { Success = false, Message = "Incident already resolved", Errors = new List<string> { "Duplicate resolve attempt" } };
+
+                incident.StatusId = resolvedStatus.Id;
+
+                _context.IncidentHistories.Add(new IncidentHistory
+                {
+                    IncidentId = incident.Id,
+                    StatusId = resolvedStatus.Id,
+                    ChangedByUserId = userId,
+                    ChangedAt = DateTime.UtcNow,
+                    Action = "Resolved",
+                    Changes = "Incident resolved"
+                });
+
+                await LogAuditAsync("Resolve", nameof(Incident), incident.Id, $"Incident resolved by user {userId}");
+
+                await _context.SaveChangesAsync();
+
+                return new SimpleResponse
+                {
+                    Success = true,
+                    Message = "Incident resolved successfully",
+                    Errors = new List<string>()
+                };
+            }
+            catch (Exception ex)
+            {
+                return new SimpleResponse
+                {
+                    Success = false,
+                    Message = "Failed to resolve incident",
+                    Errors = new List<string> { ex.Message }
+                };
+            }
+        }
+
+        public async Task<SimpleResponse> CloseIncidentAsync(int incidentId, string userId)
+        {
+            try
+            {
+                var incident = await _context.Incidents.FindAsync(incidentId);
+
+                if (incident == null)
+                    return new SimpleResponse { Success = false, Message = "Incident not found", Errors = new List<string> { "Invalid incident ID" } };
+
+                var closedStatus = await _context.IncidentStatuses.FirstOrDefaultAsync(s => s.Name == "Closed");
+
+                if (closedStatus == null)
+                    return new SimpleResponse { Success = false, Message = "Closed status not found", Errors = new List<string> { "Closed status not configured in DB" } };
+
+                if (incident.StatusId == closedStatus.Id)
+                    return new SimpleResponse { Success = false, Message = "Incident already closed", Errors = new List<string> { "Duplicate close attempt" } };
+
+                incident.StatusId = closedStatus.Id;
+
+                _context.IncidentHistories.Add(new IncidentHistory
+                {
+                    IncidentId = incident.Id,
+                    StatusId = closedStatus.Id,
+                    ChangedByUserId = userId,
+                    ChangedAt = DateTime.UtcNow,
+                    Action = "Closed",
+                    Changes = "Incident closed"
+                });
+
+                await LogAuditAsync("Close", nameof(Incident), incident.Id, $"Incident closed by user {userId}");
+
+                await _context.SaveChangesAsync();
+
+                return new SimpleResponse
+                {
+                    Success = true,
+                    Message = "Incident closed successfully",
+                    Errors = new List<string>()
+                };
+            }
+            catch (Exception ex)
+            {
+                return new SimpleResponse
+                {
+                    Success = false,
+                    Message = "Failed to close incident",
+                    Errors = new List<string> { ex.Message }
+                };
+            }
+        }
         #region Filtering / Pagination
         public async Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter, string lang = "en")
         {
@@ -408,6 +565,7 @@ namespace Wasel_Palestine.BLL.Service
                 Category = incident.Category?.Name,
                 Severity = incident.Severity?.Name,
                 Status = incident.Status?.Name,
+                Verified = incident.Verified,
                 Latitude = incident.Location != null ? (double)incident.Location.Latitude : 0,
                 Longitude = incident.Location != null ? (double)incident.Location.Longitude : 0,
                 CreatedAt = incident.CreatedAt,

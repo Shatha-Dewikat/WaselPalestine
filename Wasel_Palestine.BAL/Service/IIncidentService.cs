@@ -16,6 +16,9 @@ namespace Wasel_Palestine.BLL.Service
         Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter, string lang = "en");
         Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest paginationRequest, string lang = "en");
         Task<List<IncidentResponse>> GetFilteredPagedIncidentsAsync(IncidentQueryRequest request, string lang = "en");
+        Task<SimpleResponse> VerifyIncidentAsync(int incidentId, string userId);
+        Task<SimpleResponse> CloseIncidentAsync(int incidentId, string userId);
+        Task<SimpleResponse> ResolveIncidentAsync(int incidentId, string userId);
 
     }
 }

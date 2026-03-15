@@ -108,5 +108,32 @@ namespace Wasel_Palestine.PL.Area.Incidents
             var result = await _incidentService.GetFilteredPagedIncidentsAsync(request);
             return Ok(result);
         }
+
+        [HttpPost("{id}/verify")]
+        [Authorize(Roles = "Moderator,Admin")]
+        public async Task<IActionResult> VerifyIncident(int id)
+        {
+            var userId = User.FindFirst("UserId")?.Value;
+            var result = await _incidentService.VerifyIncidentAsync(id, userId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        [HttpPost("{id}/resolve")]
+        [Authorize(Roles = "Moderator,Admin")]
+        public async Task<IActionResult> ResolveIncident(int id)
+        {
+            var userId = User.FindFirst("UserId")?.Value;
+            var result = await _incidentService.ResolveIncidentAsync(id, userId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        [HttpPost("{id}/close")]
+        [Authorize(Roles = "Moderator,Admin")]
+        public async Task<IActionResult> CloseIncident(int id)
+        {
+            var userId = User.FindFirst("UserId")?.Value;
+            var result = await _incidentService.CloseIncidentAsync(id, userId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
     }
 }
