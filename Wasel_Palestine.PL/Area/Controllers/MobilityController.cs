@@ -36,14 +36,12 @@ public async Task<IActionResult> GetRoute([FromQuery] double sLat, [FromQuery] d
 [HttpPost("submit-report")]
 public async Task<IActionResult> PostReport([FromBody] CreateReportDto reportDto)
 {
-    if (reportDto == null) return BadRequest("Invalid report data.");
-
-    var success = await _reportingService.SubmitReportAsync(reportDto);
+    var result = await _reportingService.SubmitReportAsync(reportDto);
     
-    if (success) 
-        return Ok(new { message = "Report received! Thank you for helping others." });
+    if (result.StartsWith("Success"))
+        return Ok(new { message = result });
     
-    return StatusCode(500, "Failed to save the report.");
+    return Conflict(new { message = result }); // Conflict (409) تعني وجود تكرار
 }
     }
 }
