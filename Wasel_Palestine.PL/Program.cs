@@ -78,15 +78,15 @@ namespace Wasel_Palestine.PL
             // Services
             builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
             builder.Services.AddScoped<ITokenService, TokenService>();
-            builder.Services.AddTransient<IEmailSender, EmailSender>(); 
-
+            builder.Services.AddTransient<IEmailSender, EmailSender>();
+      
             builder.Services.AddScoped<IIncidentService, IncidentService>();
             builder.Services.AddScoped<IIncidentCategoryService, IncidentCategoryService>();
             builder.Services.AddScoped<IIncidentSeverityService, IncidentSeverityService>();
             builder.Services.AddScoped<IIncidentStatusService, IncidentStatusService>();
             builder.Services.AddScoped<IIncidentMediaService, IncidentMediaService>();
             builder.Services.AddScoped<IFileService, FileService>();
-
+            builder.Services.AddScoped<ICheckpointService, CheckpointService>();
             // Repositories
             builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
             builder.Services.AddScoped<IIncidentCategoryRepository, IncidentCategoryRepository>();
@@ -94,6 +94,7 @@ namespace Wasel_Palestine.PL
             builder.Services.AddScoped<IIncidentSeverityRepository, IncidentSeverityRepository>();
             builder.Services.AddScoped<IIncidentStatusRepository, IncidentStatusRepository>();
             builder.Services.AddScoped<IIncidentMediaRepository, IncidentMediaRepository>();
+            builder.Services.AddScoped<ICheckpointRepository, CheckpointRepository>();
 
             // Seeders
             builder.Services.AddScoped<RoleSeedData>();
