@@ -37,9 +37,8 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
             var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
             var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
 
-            var success = await _service.UpdateCheckpointAsync(id, request, CurrentUserId, ip, userAgent);
-            return success ? Ok(new { message = "Checkpoint updated successfully" })
-                           : NotFound(new { message = "Checkpoint not found" });
+            var result = await _service.UpdateCheckpointAsync(id, request, CurrentUserId, ip, userAgent);
+            return Ok(result);
         }
 
         [HttpDelete("{id}")]
@@ -49,9 +48,19 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
             var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
             var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
 
-            var success = await _service.DeleteCheckpointAsync(id, CurrentUserId, ip, userAgent);
-            return success ? Ok(new { message = "Checkpoint deleted successfully" })
-                           : NotFound(new { message = "Checkpoint not found" });
+            var result = await _service.DeleteCheckpointAsync(id, CurrentUserId, ip, userAgent);
+            return Ok(result);
+        }
+
+        [HttpPost("{id}/restore")]
+        [Authorize(Roles = "Moderator,Admin")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
+            var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
+
+            var result = await _service.RestoreCheckpointAsync(id, CurrentUserId, ip, userAgent);
+            return Ok(result);
         }
 
         [HttpPost("{id}/change-status")]
@@ -61,9 +70,8 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
             var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
             var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
 
-            var success = await _service.ChangeStatusAsync(id, request, CurrentUserId, ip, userAgent);
-            return success ? Ok(new { message = $"Status changed to {request.Status}" })
-                           : NotFound(new { message = "Checkpoint not found" });
+            var result = await _service.ChangeStatusAsync(id, request, CurrentUserId, ip, userAgent);
+            return Ok(result);
         }
 
         [HttpGet("{id}")]
@@ -71,7 +79,7 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
         public async Task<IActionResult> GetById(int id, [FromQuery] string lang = "en")
         {
             var checkpoint = await _service.GetCheckpointByIdAsync(id, lang);
-            return checkpoint != null ? Ok(checkpoint) : NotFound(new { message = "Checkpoint not found" });
+            return Ok(checkpoint);
         }
 
         [HttpGet]
@@ -94,9 +102,6 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
         [Authorize]
         public async Task<IActionResult> GetPaged([FromQuery] CheckPointPaginationRequest pagination, [FromQuery] string lang = "en")
         {
-            if (pagination.PageNumber < 1 || pagination.PageSize < 1)
-                return BadRequest(new { message = "Invalid pagination values" });
-
             var result = await _service.GetPagedCheckpointsAsync(pagination, lang);
             return Ok(result);
         }

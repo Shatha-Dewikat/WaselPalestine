@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Wasel_Palestine.DAL.Data;
 
@@ -11,9 +12,11 @@ using Wasel_Palestine.DAL.Data;
 namespace Wasel_Palestine.DAL.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260319135126_old")]
+    partial class old
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -295,9 +298,6 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("CheckpointStatusId")
-                        .HasColumnType("int");
-
                     b.Property<double>("ConfidenceScore")
                         .HasColumnType("float");
 
@@ -335,31 +335,9 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CheckpointStatusId");
-
                     b.HasIndex("LocationId");
 
                     b.ToTable("Checkpoints");
-                });
-
-            modelBuilder.Entity("Wasel_Palestine.DAL.Model.CheckpointStatus", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("CheckpointStatuses");
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.CheckpointStatusHistory", b =>
@@ -380,11 +358,7 @@ namespace Wasel_Palestine.DAL.Migrations
                     b.Property<int>("CheckpointId")
                         .HasColumnType("int");
 
-                    b.Property<string>("NewStatus")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("OldStatus")
+                    b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -1280,10 +1254,6 @@ namespace Wasel_Palestine.DAL.Migrations
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.Checkpoint", b =>
                 {
-                    b.HasOne("Wasel_Palestine.DAL.Model.CheckpointStatus", null)
-                        .WithMany("Checkpoints")
-                        .HasForeignKey("CheckpointStatusId");
-
                     b.HasOne("Wasel_Palestine.DAL.Model.Location", "Location")
                         .WithMany("Checkpoints")
                         .HasForeignKey("LocationId")
@@ -1601,11 +1571,6 @@ namespace Wasel_Palestine.DAL.Migrations
                     b.Navigation("Incidents");
 
                     b.Navigation("StatusHistories");
-                });
-
-            modelBuilder.Entity("Wasel_Palestine.DAL.Model.CheckpointStatus", b =>
-                {
-                    b.Navigation("Checkpoints");
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.Incident", b =>

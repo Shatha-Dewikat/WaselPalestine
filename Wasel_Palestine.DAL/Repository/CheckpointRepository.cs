@@ -1,7 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 
@@ -30,8 +31,15 @@ namespace Wasel_Palestine.DAL.Repository
 
         public async Task<Checkpoint> CreateCheckpointAsync(Checkpoint checkpoint)
         {
+            
+            var exists = await _context.Checkpoints
+                .AnyAsync(c => c.NameEn == checkpoint.NameEn && c.LocationId == checkpoint.LocationId && c.DeletedAt == null);
+
+            if (exists)
+                throw new Exception("Checkpoint with this name already exists in the location.");
+
             _context.Checkpoints.Add(checkpoint);
-           await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
             return checkpoint;
         }
 
@@ -62,10 +70,27 @@ namespace Wasel_Palestine.DAL.Repository
                .ToListAsync();
         }
 
+        public async Task<Location> GetLocationByIdAsync(int locationId)
+        {
+            return await _context.Locations
+                .FirstOrDefaultAsync(l => l.Id == locationId);
+        }
+
+        public async Task<CheckpointStatus> GetStatusByNameAsync(string name)
+        {
+            return await _context.CheckpointStatuses
+                .FirstOrDefaultAsync(s => s.Name == name);
+        }
+
         public async Task UpdateCheckpointAsync(Checkpoint checkpoint)
         {
             _context.Checkpoints.Update(checkpoint);
             await _context.SaveChangesAsync();
         }
+        public async Task<bool> CheckpointStatusExistsAsync(string status)
+        {
+            return await _context.CheckpointStatuses.AnyAsync(s => s.Name == status);
+        }
+
     }
 }

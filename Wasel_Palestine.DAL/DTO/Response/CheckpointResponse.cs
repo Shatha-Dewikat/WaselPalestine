@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Wasel_Palestine.DAL.DTO.Response
 {
-    public class CheckpointResponse
+    public class CheckpointResponse : BaseResponse
     {
         public int Id { get; set; }
 
@@ -18,5 +18,6 @@ namespace Wasel_Palestine.DAL.DTO.Response
 
         public double ConfidenceScore { get; set; }
         public DateTime CreatedAt { get; set; }
+
     }
 }

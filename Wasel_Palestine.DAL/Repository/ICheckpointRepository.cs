@@ -20,7 +20,11 @@ namespace Wasel_Palestine.DAL.Repository
         Task AddStatusHistoryAsync(CheckpointStatusHistory history);
 
         Task<List<CheckpointStatusHistory>> GetCheckpointHistoryAsync(int checkpointId);
-
+        Task<Location> GetLocationByIdAsync(int locationId);
+        Task<CheckpointStatus> GetStatusByNameAsync(string name);
         Task AddAuditLogAsync(AuditLog log);
+        Task<bool> CheckpointStatusExistsAsync(string status);
+
+
     }
 }

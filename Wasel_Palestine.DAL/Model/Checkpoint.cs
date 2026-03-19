@@ -26,7 +26,7 @@ namespace Wasel_Palestine.DAL.Model
         public DateTime CreatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
 
-        public List<CheckpointStatusHistory> StatusHistories { get; set; }
-        public List<Incident> Incidents { get; set; }
+        public List<CheckpointStatusHistory> StatusHistories { get; set; } = new List<CheckpointStatusHistory>();
+        public List<Incident> Incidents { get; set; } = new List<Incident>();
     }
 }

@@ -34,7 +34,8 @@ namespace Wasel_Palestine.DAL.Data
         public DbSet<AlertSubscription> AlertSubscriptions { get; set; }
         public DbSet<AlertHistory> AlertHistories { get; set; }
         public DbSet<ExternalApiCache> ExternalApiCaches { get; set; }
-       
+        public DbSet<CheckpointStatus> CheckpointStatuses { get; set; }
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {

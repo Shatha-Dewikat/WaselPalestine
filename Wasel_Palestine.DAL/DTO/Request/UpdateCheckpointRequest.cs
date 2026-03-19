@@ -11,7 +11,8 @@ namespace Wasel_Palestine.DAL.DTO.Request
 
         public string DescriptionEn { get; set; }
         public string DescriptionAr { get; set; }
-
+        public string? Status { get; set; }
+        public int LocationId { get; set; }
         public int? EstimatedDelayMinutes { get; set; }
     }
 }
