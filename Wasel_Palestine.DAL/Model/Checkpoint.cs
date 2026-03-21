@@ -18,6 +18,7 @@ namespace Wasel_Palestine.DAL.Model
         public Location Location { get; set; }
 
         public string CurrentStatus { get; set; }
+        public ICollection<Incident> RelatedIncidents { get; set; } = new List<Incident>();
 
         public int? EstimatedDelayMinutes { get; set; }
 

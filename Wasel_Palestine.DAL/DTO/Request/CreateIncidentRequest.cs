@@ -10,6 +10,7 @@ namespace Wasel_Palestine.DAL.DTO.Request
         public string Title { get; set; }
         public string TitleAr { get; set; }        
         public string Description { get; set; }
+        public int? RelatedCheckpointId { get; set; }
         public string DescriptionAr { get; set; }
 
         public int CategoryId { get; set; }

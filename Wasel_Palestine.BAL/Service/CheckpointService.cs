@@ -22,7 +22,7 @@ namespace Wasel_Palestine.BLL.Service
         {
             try
             {
-                // تحقق من وجود الـ Location
+             
                 var location = await _repository.GetLocationByIdAsync(request.LocationId);
                 if (location == null)
                     return new CheckpointResponse
@@ -32,7 +32,6 @@ namespace Wasel_Palestine.BLL.Service
                         Errors = new List<string> { $"No Location found with Id = {request.LocationId}" }
                     };
 
-                // تحقق من عدم وجود أي checkpoint بنفس الـ Location
                 var existing = await _repository.GetAllCheckpointsAsync();
                 var duplicate = existing.Any(c =>
                     c.LocationId == request.LocationId &&
@@ -47,7 +46,7 @@ namespace Wasel_Palestine.BLL.Service
                         Errors = new List<string> { "A checkpoint already exists in this location." }
                     };
 
-                // إنشاء checkpoint
+             
                 var checkpoint = new Checkpoint
                 {
                     NameEn = request.NameEn,
@@ -62,10 +61,10 @@ namespace Wasel_Palestine.BLL.Service
 
                 await _repository.CreateCheckpointAsync(checkpoint);
 
-                // جلب الـ checkpoint بعد الإنشاء لضمان أن كل القيم موجودة
+               
                 var created = await _repository.GetCheckpointByIdAsync(checkpoint.Id);
 
-                // سجل StatusHistory
+           
                 await _repository.AddStatusHistoryAsync(new CheckpointStatusHistory
                 {
                     CheckpointId = created.Id,
@@ -75,7 +74,7 @@ namespace Wasel_Palestine.BLL.Service
                     ChangedByUserId = userId
                 });
 
-                // سجل Audit
+             
                 await _repository.AddAuditLogAsync(new AuditLog
                 {
                     UserId = userId,
@@ -88,7 +87,7 @@ namespace Wasel_Palestine.BLL.Service
                     UserAgent = userAgent
                 });
 
-                // أرجع response مضبوط
+               
                 return new CheckpointResponse
                 {
                     Success = true,
@@ -119,7 +118,7 @@ namespace Wasel_Palestine.BLL.Service
                 if (checkpoint == null)
                     return new CheckpointResponse { Success = false, Message = "Checkpoint not found" };
 
-                // تحقق من التكرار
+            
                 var allCheckpoints = await _repository.GetAllCheckpointsAsync();
                 var isDuplicate = allCheckpoints.Any(c =>
                     c.Id != id &&
@@ -136,7 +135,7 @@ namespace Wasel_Palestine.BLL.Service
                         Errors = new List<string> { "A checkpoint with the same name already exists in this location." }
                     };
 
-                // احفظ القديم قبل التعديل
+               
                 var oldStatus = checkpoint.CurrentStatus;
 
                 checkpoint.NameEn = request.NameEn;
@@ -150,7 +149,7 @@ namespace Wasel_Palestine.BLL.Service
                 {
                     checkpoint.CurrentStatus = request.Status;
 
-                    // سجل StatusHistory
+                   
                     await _repository.AddStatusHistoryAsync(new CheckpointStatusHistory
                     {
                         CheckpointId = checkpoint.Id,
@@ -163,7 +162,7 @@ namespace Wasel_Palestine.BLL.Service
 
                 await _repository.UpdateCheckpointAsync(checkpoint);
 
-                // سجل Audit
+               
                 await _repository.AddAuditLogAsync(new AuditLog
                 {
                     UserId = userId,
@@ -297,7 +296,7 @@ namespace Wasel_Palestine.BLL.Service
                 if (checkpoint == null)
                     return new CheckpointResponse { Success = false, Message = "Checkpoint not found" };
 
-                // تحقق من صحة الـ status (لو عندك جدول Status)
+              
                 var statusExists = await _repository.CheckpointStatusExistsAsync(request.Status);
                 if (!statusExists)
                     return new CheckpointResponse
@@ -312,7 +311,7 @@ namespace Wasel_Palestine.BLL.Service
 
                 await _repository.UpdateCheckpointAsync(checkpoint);
 
-                // سجل StatusHistory
+               
                 await _repository.AddStatusHistoryAsync(new CheckpointStatusHistory
                 {
                     CheckpointId = checkpoint.Id,
@@ -322,7 +321,6 @@ namespace Wasel_Palestine.BLL.Service
                     ChangedByUserId = userId
                 });
 
-                // سجل Audit
                 await _repository.AddAuditLogAsync(new AuditLog
                 {
                     UserId = userId,

@@ -19,6 +19,7 @@ namespace Wasel_Palestine.BLL.Service
         Task<SimpleResponse> VerifyIncidentAsync(int incidentId, string userId);
         Task<SimpleResponse> CloseIncidentAsync(int incidentId, string userId);
         Task<SimpleResponse> ResolveIncidentAsync(int incidentId, string userId);
+        Task<List<IncidentResponse>> GetIncidentsByCheckpointIdAsync(int checkpointId, string lang = "en");
 
     }
 }

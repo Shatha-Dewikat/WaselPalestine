@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,11 +14,14 @@ namespace Wasel_Palestine.BLL.Service
     public class IncidentCategoryService : IIncidentCategoryService
     {
         private readonly ApplicationDbContext _context;
-        private const string SYSTEM_USER_ID = "SYSTEM_USER_ID_FROM_DB"; 
+        private readonly IMemoryCache _cache;
+        private const string SYSTEM_USER_ID = "SYSTEM_USER_ID_FROM_DB";
+        private const string CategoriesCacheKey = "IncidentCategories_";
 
-        public IncidentCategoryService(ApplicationDbContext context)
+        public IncidentCategoryService(ApplicationDbContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         private async Task<string> GetValidUserIdAsync(string userId)
@@ -25,6 +29,12 @@ namespace Wasel_Palestine.BLL.Service
             if (!string.IsNullOrEmpty(userId) && await _context.Users.AnyAsync(u => u.Id == userId))
                 return userId;
             return SYSTEM_USER_ID;
+        }
+
+        private void ClearCategoriesCache()
+        {
+            _cache.Remove($"{CategoriesCacheKey}en");
+            _cache.Remove($"{CategoriesCacheKey}ar");
         }
 
         public async Task<IncidentCategoryResponse> CreateIncidentCategoryAsync(
@@ -64,6 +74,7 @@ namespace Wasel_Palestine.BLL.Service
                 await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
+                ClearCategoriesCache();
             }
             catch
             {
@@ -114,6 +125,7 @@ namespace Wasel_Palestine.BLL.Service
                 await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
+                ClearCategoriesCache();
             }
             catch
             {
@@ -154,6 +166,7 @@ namespace Wasel_Palestine.BLL.Service
                 await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
+                ClearCategoriesCache();
             }
             catch
             {
@@ -188,6 +201,7 @@ namespace Wasel_Palestine.BLL.Service
                 await _context.SaveChangesAsync();
 
                 await transaction.CommitAsync();
+                ClearCategoriesCache();
             }
             catch
             {
@@ -210,15 +224,28 @@ namespace Wasel_Palestine.BLL.Service
 
         public async Task<List<IncidentCategoryResponse>> GetAllIncidentCategoriesAsync(string lang = "en")
         {
-            var categories = await _context.IncidentCategories
-                .Where(c => c.DeletedAt == null)
-                .ToListAsync();
+            string cacheKey = $"{CategoriesCacheKey}{lang}";
 
-            return categories.Select(c => new IncidentCategoryResponse
+            if (!_cache.TryGetValue(cacheKey, out List<IncidentCategoryResponse> cachedCategories))
             {
-                Id = c.Id,
-                Name = lang == "ar" ? c.NameAr : c.Name
-            }).ToList();
+                var categoriesFromDb = await _context.IncidentCategories
+                    .Where(c => c.DeletedAt == null)
+                    .ToListAsync();
+
+                cachedCategories = categoriesFromDb.Select(c => new IncidentCategoryResponse
+                {
+                    Id = c.Id,
+                    Name = lang == "ar" ? c.NameAr : c.Name
+                }).ToList();
+
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromHours(1))
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(30));
+
+                _cache.Set(cacheKey, cachedCategories, cacheOptions);
+            }
+
+            return cachedCategories;
         }
     }
 }

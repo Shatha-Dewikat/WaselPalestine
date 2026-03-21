@@ -10,6 +10,8 @@ using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Repository;
 using Wasel_Palestine.DAL.Utils;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 namespace Wasel_Palestine.PL
 {
@@ -18,7 +20,7 @@ namespace Wasel_Palestine.PL
         public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
+            builder.Services.AddMemoryCache();
             // ----------------- DbContext -----------------
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -58,7 +60,43 @@ namespace Wasel_Palestine.PL
                 };
             });
 
-          
+            builder.Services.AddRateLimiter(options =>
+            {
+               
+                options.OnRejected = async (context, token) =>
+                {
+                    context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                    await context.HttpContext.Response.WriteAsJsonAsync(new
+                    {
+                        success = false,
+                        message = "You have exceeded the allowed order limit. Please try again later."
+                    }, cancellationToken: token);
+                };
+
+               
+                options.AddPolicy("fixed-by-ip", httpContext =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 100, // 100 طلب
+                            Window = TimeSpan.FromMinutes(1), // كل دقيقة
+                            QueueLimit = 0
+                        }));
+
+               
+                options.AddPolicy("strict-by-ip", httpContext =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 5, // 5 طلبات فقط
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueLimit = 0
+                        }));
+            });
+
+
             builder.Services.AddAuthorization(options =>
             {
                 options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
@@ -113,7 +151,7 @@ namespace Wasel_Palestine.PL
             // ----------------- Build & Run -----------------
             MapsterConfig.RegisterMappings();
             var app = builder.Build();
-
+            app.UseRateLimiter();
             app.UseStaticFiles();
             app.UseAuthentication();
             app.UseAuthorization();

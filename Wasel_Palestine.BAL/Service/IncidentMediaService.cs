@@ -1,12 +1,15 @@
 ﻿using Mapster;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Repository;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Wasel_Palestine.BLL.Service
 {
@@ -14,11 +17,19 @@ namespace Wasel_Palestine.BLL.Service
     {
         private readonly IIncidentMediaRepository _repository;
         private readonly IFileService _fileService;
+        private readonly IMemoryCache _cache;
+        private const string MediaCacheKey = "IncidentMedia_";
 
-        public IncidentMediaService(IIncidentMediaRepository repository, IFileService fileService)
+        public IncidentMediaService(IIncidentMediaRepository repository, IFileService fileService, IMemoryCache cache)
         {
             _repository = repository;
             _fileService = fileService;
+            _cache = cache;
+        }
+
+        private void ClearMediaCache(int incidentId)
+        {
+            _cache.Remove($"{MediaCacheKey}{incidentId}");
         }
 
         public async Task<IncidentMediaResponse> AddMediaAsync(IncidentMediaCreateRequest request)
@@ -27,6 +38,7 @@ namespace Wasel_Palestine.BLL.Service
             var fileName = await _fileService.UploadAsync(request.File);
             if (fileName == null)
                 throw new Exception("No file uploaded");
+
             var baseUrl = "http://localhost:5034";
             var media = new IncidentMedia
             {
@@ -38,6 +50,9 @@ namespace Wasel_Palestine.BLL.Service
             };
 
             var result = await _repository.AddAsync(media);
+
+            ClearMediaCache(request.IncidentId);
+
             return result.Adapt<IncidentMediaResponse>();
         }
 
@@ -47,18 +62,32 @@ namespace Wasel_Palestine.BLL.Service
             if (media == null)
                 throw new KeyNotFoundException("Media not found");
 
-            
-            var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", media.Url.TrimStart('/'));
+            var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", media.FileName);
             if (File.Exists(path))
                 File.Delete(path);
 
             await _repository.DeleteAsync(media);
+
+            ClearMediaCache(media.IncidentId);
         }
 
         public async Task<List<IncidentMediaResponse>> GetByIncidentIdAsync(int incidentId)
         {
-            var list = await _repository.GetByIncidentIdAsync(incidentId);
-            return list.Adapt<List<IncidentMediaResponse>>();
+            string cacheKey = $"{MediaCacheKey}{incidentId}";
+
+            if (!_cache.TryGetValue(cacheKey, out List<IncidentMediaResponse> cachedMedia))
+            {
+                var list = await _repository.GetByIncidentIdAsync(incidentId);
+                cachedMedia = list.Adapt<List<IncidentMediaResponse>>();
+
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(30))
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(10));
+
+                _cache.Set(cacheKey, cachedMedia, cacheOptions);
+            }
+
+            return cachedMedia;
         }
     }
 }

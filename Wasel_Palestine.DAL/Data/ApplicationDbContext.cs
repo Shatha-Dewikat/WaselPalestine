@@ -274,6 +274,12 @@ namespace Wasel_Palestine.DAL.Data
                 .WithMany()
                 .HasForeignKey(i => i.StatusId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<Incident>()
+    .HasOne(i => i.RelatedCheckpoint) 
+    .WithMany(c => c.RelatedIncidents) 
+    .HasForeignKey(i => i.RelatedCheckpointId)
+    .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Mapster;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -13,14 +14,40 @@ namespace Wasel_Palestine.BLL.Service
     public class IncidentSeverityService : IIncidentSeverityService
     {
         private readonly IIncidentSeverityRepository _repository;
-
         private readonly ApplicationDbContext _context;
+        private readonly IMemoryCache _cache;
 
-        public IncidentSeverityService(IIncidentSeverityRepository repository, ApplicationDbContext context)
+        private const string SeverityListCacheKey = "IncidentSeverities_List";
+
+        public IncidentSeverityService(IIncidentSeverityRepository repository, ApplicationDbContext context, IMemoryCache cache)
         {
             _repository = repository;
             _context = context;
+            _cache = cache;
         }
+
+        private void ClearSeverityCache()
+        {
+            _cache.Remove(SeverityListCacheKey);
+        }
+
+        public async Task<List<IncidentSeverityResponse>> GetAllIncidentSeveritiesAsync()
+        {
+            if (!_cache.TryGetValue(SeverityListCacheKey, out List<IncidentSeverityResponse> cachedList))
+            {
+                var severities = await _repository.GetAllAsync();
+                cachedList = severities.Adapt<List<IncidentSeverityResponse>>();
+
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromHours(24))
+                    .SetSlidingExpiration(TimeSpan.FromHours(4));
+
+                _cache.Set(SeverityListCacheKey, cachedList, cacheOptions);
+            }
+
+            return cachedList;
+        }
+
         public async Task<IncidentSeverityResponse> CreateIncidentSeverityAsync(
             IncidentSeverityCreateRequest request,
             string userId,
@@ -52,6 +79,8 @@ namespace Wasel_Palestine.BLL.Service
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
+                ClearSeverityCache();
+
                 return result.Adapt<IncidentSeverityResponse>();
             }
             catch
@@ -70,6 +99,7 @@ namespace Wasel_Palestine.BLL.Service
         {
             var severity = await _repository.GetByIdAsync(id);
             if (severity == null) throw new KeyNotFoundException("Severity not found");
+
             if (await _repository.ExistsByNameAsync(request.Name, excludeId: id))
                 throw new InvalidOperationException($"Severity '{request.Name}' already exists.");
 
@@ -93,6 +123,8 @@ namespace Wasel_Palestine.BLL.Service
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                ClearSeverityCache();
 
                 return severity.Adapt<IncidentSeverityResponse>();
             }
@@ -127,6 +159,8 @@ namespace Wasel_Palestine.BLL.Service
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                ClearSeverityCache();
             }
             catch
             {
@@ -137,14 +171,11 @@ namespace Wasel_Palestine.BLL.Service
 
         public async Task<IncidentSeverityResponse> GetIncidentSeverityByIdAsync(int id)
         {
-            var severity = await _repository.GetByIdAsync(id);
-            return severity?.Adapt<IncidentSeverityResponse>();
-        }
+            
+            var list = await GetAllIncidentSeveritiesAsync();
+            var severity = list.Find(s => s.Id == id);
 
-        public async Task<List<IncidentSeverityResponse>> GetAllIncidentSeveritiesAsync()
-        {
-            var severities = await _repository.GetAllAsync();
-            return severities.Adapt<List<IncidentSeverityResponse>>();
+            return severity;
         }
     }
 }

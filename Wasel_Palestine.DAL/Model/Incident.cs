@@ -15,6 +15,8 @@ namespace Wasel_Palestine.DAL.Model
         public int CategoryId { get; set; }
         public IncidentCategory Category { get; set; }
 
+        public int? RelatedCheckpointId { get; set; }
+        public Checkpoint RelatedCheckpoint { get; set; }
         public int SeverityId { get; set; }
         public IncidentSeverity Severity { get; set; }
 

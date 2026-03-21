@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using System;
+using System.Threading.Tasks;
 using Wasel_Palestine.BLL.Service;
 using Wasel_Palestine.DAL.DTO.Request;
-using System.Threading.Tasks;
 
 namespace Wasel_Palestine.PL.Area.Incidents
 {
@@ -18,73 +19,116 @@ namespace Wasel_Palestine.PL.Area.Incidents
             _service = service;
         }
 
+        private string CurrentUserId => User?.Claims.FirstOrDefault(c => c.Type == "UserId")?.Value;
+        private string ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
+        private string UserAgent => Request.Headers["User-Agent"].ToString() ?? "N/A";
+
         [HttpPost]
         [Authorize(Roles = "Admin,Moderator")]
+        [EnableRateLimiting("strict-by-ip")]
         public async Task<IActionResult> Create(IncidentStatusCreateRequest request)
         {
             try
             {
-                var userId = User.FindFirst("UserId")?.Value;
-                var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
-                var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
-
-                var result = await _service.CreateStatusAsync(request, userId, ip, userAgent);
-                return Ok(result);
+                var result = await _service.CreateStatusAsync(request, CurrentUserId, ClientIp, UserAgent);
+                return Ok(new
+                {
+                    success = true,
+                    message = $"Status '{result.Name}' created successfully.",
+                    data = result
+                });
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = $"Unexpected error: {ex.Message}" });
             }
         }
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin,Moderator")]
+        [EnableRateLimiting("strict-by-ip")]
         public async Task<IActionResult> Update(int id, IncidentStatusUpdateRequest request)
         {
             try
             {
-                var userId = User.FindFirst("UserId")?.Value;
-                var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
-                var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
-
-                var result = await _service.UpdateStatusAsync(id, request, userId, ip, userAgent);
-                return Ok(result);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
+                var result = await _service.UpdateStatusAsync(id, request, CurrentUserId, ClientIp, UserAgent);
+                return Ok(new
+                {
+                    success = true,
+                    message = $"Status '{result.Name}' updated successfully.",
+                    data = result
+                });
             }
             catch (KeyNotFoundException ex)
             {
-                return NotFound(new { message = ex.Message });
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = $"Unexpected error: {ex.Message}" });
             }
         }
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin,Moderator")]
+        [EnableRateLimiting("strict-by-ip")]
         public async Task<IActionResult> Delete(int id)
         {
-            var userId = User.FindFirst("UserId")?.Value;
-            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
-            var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
-
-            await _service.DeleteStatusAsync(id, userId, ip, userAgent);
-            return Ok(new { message = "Status deleted successfully" });
+            try
+            {
+                await _service.DeleteStatusAsync(id, CurrentUserId, ClientIp, UserAgent);
+                return Ok(new { success = true, message = $"Status with ID {id} deleted successfully." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = $"Unexpected error: {ex.Message}" });
+            }
         }
 
         [HttpGet("{id}")]
+        [EnableRateLimiting("fixed-by-ip")]
+
         public async Task<IActionResult> GetById(int id)
         {
-            var result = await _service.GetStatusByIdAsync(id);
-            if (result == null) return NotFound();
-            return Ok(result);
+            try
+            {
+                var result = await _service.GetStatusByIdAsync(id);
+                if (result == null)
+                    return NotFound(new { success = false, message = $"Status with ID {id} not found." });
+
+                return Ok(new { success = true, message = "Status retrieved successfully.", data = result });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = $"Unexpected error: {ex.Message}" });
+            }
         }
 
         [HttpGet]
+        [EnableRateLimiting("fixed-by-ip")]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _service.GetAllStatusesAsync();
-            return Ok(result);
+            try
+            {
+                var result = await _service.GetAllStatusesAsync();
+                return Ok(new { success = true, message = "All statuses retrieved successfully.", data = result });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = $"Unexpected error: {ex.Message}" });
+            }
         }
     }
 }

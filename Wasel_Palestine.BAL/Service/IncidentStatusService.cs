@@ -1,4 +1,5 @@
 ﻿using Mapster;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -13,13 +14,43 @@ namespace Wasel_Palestine.BLL.Service
     public class IncidentStatusService : IIncidentStatusService
     {
         private readonly IIncidentStatusRepository _repository;
-
         private readonly ApplicationDbContext _context;
+        private readonly IMemoryCache _cache;
+        private const string StatusListCacheKey = "IncidentStatuses_List";
 
-        public IncidentStatusService(IIncidentStatusRepository repository, ApplicationDbContext context)
+        public IncidentStatusService(IIncidentStatusRepository repository, ApplicationDbContext context, IMemoryCache cache)
         {
             _repository = repository;
             _context = context;
+            _cache = cache;
+        }
+
+        private void ClearStatusCache()
+        {
+            _cache.Remove(StatusListCacheKey);
+        }
+
+        public async Task<List<IncidentStatusResponse>> GetAllStatusesAsync()
+        {
+            if (!_cache.TryGetValue(StatusListCacheKey, out List<IncidentStatusResponse> cachedList))
+            {
+                var statuses = await _repository.GetAllAsync();
+                cachedList = statuses.Adapt<List<IncidentStatusResponse>>();
+
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromHours(24))
+                    .SetSlidingExpiration(TimeSpan.FromHours(4));
+
+                _cache.Set(StatusListCacheKey, cachedList, cacheOptions);
+            }
+            return cachedList;
+        }
+
+        public async Task<IncidentStatusResponse> GetStatusByIdAsync(int id)
+        {
+          
+            var list = await GetAllStatusesAsync();
+            return list.Find(s => s.Id == id);
         }
 
         public async Task<IncidentStatusResponse> CreateStatusAsync(
@@ -53,6 +84,8 @@ namespace Wasel_Palestine.BLL.Service
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
+                ClearStatusCache(); 
+
                 return result.Adapt<IncidentStatusResponse>();
             }
             catch
@@ -71,6 +104,7 @@ namespace Wasel_Palestine.BLL.Service
         {
             var status = await _repository.GetByIdAsync(id);
             if (status == null) throw new KeyNotFoundException("Status not found");
+
             if (await _repository.ExistsByNameAsync(request.Name, excludeId: id))
                 throw new InvalidOperationException($"Status '{request.Name}' already exists.");
 
@@ -94,6 +128,8 @@ namespace Wasel_Palestine.BLL.Service
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                ClearStatusCache(); 
 
                 return status.Adapt<IncidentStatusResponse>();
             }
@@ -128,24 +164,14 @@ namespace Wasel_Palestine.BLL.Service
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                ClearStatusCache(); 
             }
             catch
             {
                 await transaction.RollbackAsync();
                 throw;
             }
-        }
-
-        public async Task<IncidentStatusResponse> GetStatusByIdAsync(int id)
-        {
-            var status = await _repository.GetByIdAsync(id);
-            return status?.Adapt<IncidentStatusResponse>();
-        }
-
-        public async Task<List<IncidentStatusResponse>> GetAllStatusesAsync()
-        {
-            var statuses = await _repository.GetAllAsync();
-            return statuses.Adapt<List<IncidentStatusResponse>>();
         }
     }
 }

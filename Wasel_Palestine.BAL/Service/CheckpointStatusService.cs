@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Microsoft.Extensions.Caching.Memory;
+using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
+using System.Threading.Tasks;
 using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
 using Wasel_Palestine.DAL.Model;
@@ -11,21 +13,32 @@ namespace Wasel_Palestine.BLL.Service
     public class CheckpointStatusService : ICheckpointStatusService
     {
         private readonly ICheckpointStatusRepository _repo;
+        private readonly IMemoryCache _cache;
+        private const string StatusCacheKey = "CheckpointStatuses_All";
 
-        public CheckpointStatusService(ICheckpointStatusRepository repo)
+        public CheckpointStatusService(ICheckpointStatusRepository repo, IMemoryCache cache)
         {
             _repo = repo;
+            _cache = cache;
         }
 
         public async Task<List<CheckpointStatusResponse>> GetAllAsync()
         {
-            var statuses = await _repo.GetAllAsync();
-
-            return statuses.Select(s => new CheckpointStatusResponse
+            if (!_cache.TryGetValue(StatusCacheKey, out List<CheckpointStatusResponse> cachedStatuses))
             {
-                Id = s.Id,
-                Name = s.Name
-            }).ToList();
+                var statuses = await _repo.GetAllAsync();
+
+                cachedStatuses = statuses.Select(s => new CheckpointStatusResponse
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Success = true
+                }).ToList();
+
+                _cache.Set(StatusCacheKey, cachedStatuses, TimeSpan.FromHours(24));
+            }
+
+            return cachedStatuses;
         }
 
         public async Task<CheckpointStatusResponse> CreateAsync(CreateCheckpointStatusRequest request)
@@ -36,20 +49,21 @@ namespace Wasel_Palestine.BLL.Service
             {
                 if (string.IsNullOrWhiteSpace(request.Name))
                 {
-                    response.Success = false;
-                    response.Message = "Validation error";
-                    response.Errors = new List<string> { "Status name is required" };
-                    return response;
+                    return new CheckpointStatusResponse
+                    {
+                        Success = false,
+                        Message = "Status name is required"
+                    };
                 }
 
                 var exists = await _repo.ExistsAsync(request.Name);
-
                 if (exists)
                 {
-                    response.Success = false;
-                    response.Message = "Duplicate status";
-                    response.Errors = new List<string> { "Status already exists" };
-                    return response;
+                    return new CheckpointStatusResponse
+                    {
+                        Success = false,
+                        Message = "Status already exists"
+                    };
                 }
 
                 var status = new CheckpointStatus
@@ -59,20 +73,24 @@ namespace Wasel_Palestine.BLL.Service
 
                 var created = await _repo.CreateAsync(status);
 
-                response.Success = true;
-                response.Message = "Status created successfully";
-                response.Id = created.Id;
-                response.Name = created.Name;
+                _cache.Remove(StatusCacheKey);
 
-                return response;
+                return new CheckpointStatusResponse
+                {
+                    Id = created.Id,
+                    Name = created.Name,
+                    Success = true,
+                    Message = "Status created successfully"
+                };
             }
             catch (Exception ex)
             {
-                response.Success = false;
-                response.Message = "Something went wrong";
-                response.Errors = new List<string> { ex.Message };
-
-                return response;
+                return new CheckpointStatusResponse
+                {
+                    Success = false,
+                    Message = "Error occurred",
+                    Errors = new List<string> { ex.Message }
+                };
             }
         }
     }

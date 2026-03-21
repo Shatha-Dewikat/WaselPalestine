@@ -13,5 +13,6 @@ namespace Wasel_Palestine.DAL.DTO.Request
         public DateTime? DateFrom { get; set; }
         public DateTime? DateTo { get; set; }
         public string? LocationName { get; internal set; }
+        public int? RelatedCheckpointId { get; set; }
     }
 }
