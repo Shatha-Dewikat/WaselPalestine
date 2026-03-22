@@ -62,7 +62,11 @@ namespace Wasel_Palestine.BLL.Service
             if (await _repository.ExistsByNameAsync(request.Name))
                 throw new InvalidOperationException($"Status '{request.Name}' already exists.");
 
-            var status = new IncidentStatus { Name = request.Name };
+            var status = new IncidentStatus
+            {
+                Name = request.Name,
+                Description = request.Description
+            };
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -112,6 +116,7 @@ namespace Wasel_Palestine.BLL.Service
             try
             {
                 status.Name = request.Name;
+                status.Description = request.Description;
                 await _repository.UpdateAsync(status);
 
                 await _context.AuditLogs.AddAsync(new AuditLog
@@ -121,7 +126,7 @@ namespace Wasel_Palestine.BLL.Service
                     EntityName = nameof(IncidentStatus),
                     EntityId = status.Id,
                     Timestamp = DateTime.UtcNow,
-                    Details = $"Updated status to: {status.Name}",
+                    Details = $"Created status: {status.Name} with Description: {status.Description}",
                     IPAddress = ip,
                     UserAgent = userAgent
                 });

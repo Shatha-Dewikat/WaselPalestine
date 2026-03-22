@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Wasel_Palestine.DAL.DTO.Response
 {
-    public class IncidentMediaResponse : BaseResponse
+    public class IncidentMediaResponse 
     {
         public int Id { get; set; }
         public int IncidentId { get; set; }

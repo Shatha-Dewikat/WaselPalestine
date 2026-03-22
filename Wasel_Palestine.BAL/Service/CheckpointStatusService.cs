@@ -32,6 +32,7 @@ namespace Wasel_Palestine.BLL.Service
                 {
                     Id = s.Id,
                     Name = s.Name,
+                    Description = s.Description,
                     Success = true
                 }).ToList();
 
@@ -44,7 +45,7 @@ namespace Wasel_Palestine.BLL.Service
         public async Task<CheckpointStatusResponse> CreateAsync(CreateCheckpointStatusRequest request)
         {
             var response = new CheckpointStatusResponse();
-
+          
             try
             {
                 if (string.IsNullOrWhiteSpace(request.Name))
@@ -68,7 +69,8 @@ namespace Wasel_Palestine.BLL.Service
 
                 var status = new CheckpointStatus
                 {
-                    Name = request.Name.Trim()
+                    Name = request.Name.Trim(),
+                    Description = request.Description
                 };
 
                 var created = await _repo.CreateAsync(status);
@@ -79,6 +81,7 @@ namespace Wasel_Palestine.BLL.Service
                 {
                     Id = created.Id,
                     Name = created.Name,
+                    Description = created.Description,
                     Success = true,
                     Message = "Status created successfully"
                 };

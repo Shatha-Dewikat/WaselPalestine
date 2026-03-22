@@ -217,5 +217,21 @@ namespace Wasel_Palestine.PL.Area.Incidents
                 return StatusCode(500, new { success = false, message = $"Unexpected error: {ex.Message}" });
             }
         }
+
+        [HttpGet("dashboard-stats")]
+        [Authorize(Roles = "Admin,Moderator")]
+        [EnableRateLimiting("fixed-by-ip")]
+        public async Task<IActionResult> GetDashboardStats()
+        {
+            try
+            {
+                var stats = await _incidentService.GetDashboardStatsAsync();
+                return Ok(new { success = true, data = stats });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
 }

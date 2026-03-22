@@ -9,6 +9,7 @@ namespace Wasel_Palestine.DAL.Data
     public class ApplicationDbContext : IdentityDbContext<User, Role, string>
     {
         public DbSet<User> Users { get; set; }
+        public DbSet<CityIncidentStats> CityIncidentStats { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }

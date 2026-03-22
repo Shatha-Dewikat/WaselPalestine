@@ -10,5 +10,6 @@ namespace Wasel_Palestine.DAL.DTO.Request
         [Required]
         [MaxLength(50)]
         public string Name { get; set; }
+        public string Description { get; set; }
     }
 }

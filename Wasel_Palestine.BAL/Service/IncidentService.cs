@@ -1,12 +1,14 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
+using Wasel_Palestine.DAL.Migrations;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Repository;
 
@@ -17,12 +19,14 @@ namespace Wasel_Palestine.BLL.Service
         private readonly IIncidentRepository _incidentRepo;
         private readonly ApplicationDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
-
-        public IncidentService(IIncidentRepository incidentRepo, ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
+        private readonly IMemoryCache _cache;
+        private const string DashboardCacheKey = "CityStatsCache";
+        public IncidentService(IIncidentRepository incidentRepo, ApplicationDbContext context, IHttpContextAccessor httpContextAccessor, IMemoryCache cache)
         {
             _incidentRepo = incidentRepo;
             _context = context;
             _httpContextAccessor = httpContextAccessor;
+            _cache = cache;
         }
 
         private string GetCurrentUserId() => _httpContextAccessor.HttpContext?.User?.FindFirst("UserId")?.Value;
@@ -86,8 +90,10 @@ namespace Wasel_Palestine.BLL.Service
 
                 await _incidentRepo.AddAsync(incident);
                 await _context.SaveChangesAsync();
+                await _context.Entry(incident).Reference(i => i.Category).LoadAsync();
+                await _context.Entry(incident).Reference(i => i.Severity).LoadAsync();
+                await _context.Entry(incident).Reference(i => i.Status).LoadAsync();
 
-               
                 if (incident.CheckpointId.HasValue)
                 {
                     var checkpoint = await _context.Checkpoints.FindAsync(incident.CheckpointId.Value);
@@ -193,16 +199,70 @@ namespace Wasel_Palestine.BLL.Service
         }
         #endregion
 
+        public async Task<List<CityIncidentStats>> GetDashboardStatsAsync()
+        {
+           
+            if (_cache == null)
+                throw new Exception("MemoryCache is not initialized in Constructor.");
+
+            if (!_cache.TryGetValue(DashboardCacheKey, out List<CityIncidentStats> stats))
+            {
+               
+                var incidents = await _context.Incidents
+                    .Include(i => i.Location)
+                    .Include(i => i.Status)
+                    
+                    .Where(i => i.Status != null && i.Status.Name != "Resolved" && i.Status.Name != "Closed")
+                    .ToListAsync();
+
+                
+                var groupedStats = incidents
+                    .GroupBy(i => i.Location?.City ?? "Unknown")
+                    .Select(group => new CityIncidentStats
+                    {
+                        City = group.Key,
+                        ActiveIncidentsCount = group.Count(),
+                        
+                        ClosedCheckpointsCount = _context.Checkpoints
+                            .Include(c => c.Location)
+                            .AsEnumerable()
+                            .Count(c => (c.Location?.City ?? "Unknown") == group.Key && c.CurrentStatus == "Closed")
+                    })
+                    .ToList();
+
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(5))
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(2));
+
+                _cache.Set(DashboardCacheKey, groupedStats, cacheOptions);
+                return groupedStats;
+            }
+
+            return stats;
+        }
+
         #region Queries
         public async Task<IncidentResponse> GetIncidentByIdAsync(int id, string lang = "en")
         {
-            var incident = await _context.Incidents.Include(i => i.Category).Include(i => i.Status).Include(i => i.Location).Include(i => i.IncidentHistories).FirstOrDefaultAsync(i => i.Id == id);
+            var incident = await _context.Incidents
+                .Include(i => i.Category)
+                .Include(i => i.Status)
+                .Include(i => i.Location)
+                .Include(i => i.IncidentMedia) 
+                .Include(i => i.IncidentHistories)
+                .FirstOrDefaultAsync(i => i.Id == id);
+
             return incident == null ? new IncidentResponse { Success = false } : MapToResponse(incident, lang);
         }
-
         public async Task<List<IncidentResponse>> GetIncidentAllAsync(string lang = "en")
         {
-            var incidents = await _context.Incidents.Include(i => i.Category).Include(i => i.Status).Include(i => i.Location).ToListAsync();
+            var incidents = await _context.Incidents
+                .Include(i => i.Category)
+                .Include(i => i.Status)
+                .Include(i => i.Location)
+                .Include(i => i.IncidentMedia)
+                .ToListAsync();
+
             return incidents.Select(i => MapToResponse(i, lang)).ToList();
         }
 
@@ -214,21 +274,26 @@ namespace Wasel_Palestine.BLL.Service
 
         public async Task<List<IncidentResponse>> GetFilteredIncidentsAsync(IncidentFilterRequest filter, string lang = "en")
         {
-            var query = _context.Incidents.Include(i => i.Location).AsQueryable();
+            var query = _context.Incidents
+                .Include(i => i.Location)
+                .Include(i => i.IncidentMedia) 
+                .AsQueryable();
+
             if (filter.StatusId.HasValue) query = query.Where(i => i.StatusId == filter.StatusId);
+
             var data = await query.ToListAsync();
             return data.Select(i => MapToResponse(i, lang)).ToList();
         }
 
         public async Task<List<IncidentResponse>> GetPagedIncidentsAsync(PaginationRequest pagination, string lang = "en")
         {
-            var data = await _context.Incidents.Include(i => i.Location).Skip((pagination.PageNumber - 1) * pagination.PageSize).Take(pagination.PageSize).ToListAsync();
+            var data = await _context.Incidents.Include(i => i.Location).Skip((pagination.PageNumber - 1) * pagination.PageSize).Take(pagination.PageSize).Include(i => i.IncidentMedia).ToListAsync();
             return data.Select(i => MapToResponse(i, lang)).ToList();
         }
 
         public async Task<List<IncidentResponse>> GetFilteredPagedIncidentsAsync(IncidentQueryRequest request, string lang = "en")
         {
-            var query = _context.Incidents.Include(i => i.Location).AsQueryable();
+            var query = _context.Incidents.Include(i => i.Location).AsQueryable().Include(i => i.IncidentMedia);
             var data = await query.Skip((request.Pagination.PageNumber - 1) * request.Pagination.PageSize).Take(request.Pagination.PageSize).ToListAsync();
             return data.Select(i => MapToResponse(i, lang)).ToList();
         }
@@ -236,19 +301,39 @@ namespace Wasel_Palestine.BLL.Service
 
         private IncidentResponse MapToResponse(Incident incident, string lang = "en")
         {
-            return new IncidentResponse
+            var baseUrl = "http://localhost:5034"; 
+
+            var response = new IncidentResponse
             {
                 Id = incident.Id,
                 Title = lang == "ar" ? incident.TitleAr : incident.Title,
-                Success = true,
-                CreatedAt = incident.CreatedAt,
+                Description = lang == "ar" ? incident.DescriptionAr : incident.Description,
+                Category = incident.Category?.Name,
+                Severity = incident.Severity?.Name,
                 Status = incident.Status?.Name,
-                Category = incident.Category?.Name
+                Latitude = (double)(incident.Location?.Latitude ?? 0),
+                Longitude = (double)(incident.Location?.Longitude ?? 0),
+                CreatedAt = incident.CreatedAt,
+                RelatedCheckpointId = incident.CheckpointId,
+                Success = true,
+                Message = "Operation successful",
+
+               
+                Media = incident.IncidentMedia?.Select(m => new IncidentMediaResponse
+                {
+                    Id = m.Id,
+                    Url = m.Url.StartsWith("http") ? m.Url : $"{baseUrl}{m.Url}",
+                    CreatedAt = m.CreatedAt
+                }).ToList() ?? new List<IncidentMediaResponse>()
             };
+
+            return response;
         }
 
         public async Task<List<IncidentResponse>> GetIncidentsByCheckpointIdAsync(int checkpointId, string lang = "en")
         {
+            var baseUrl = "http://localhost:5034";
+
             var incidents = await _context.Incidents
                 .Include(i => i.Category)
                 .Include(i => i.Severity)
@@ -259,7 +344,20 @@ namespace Wasel_Palestine.BLL.Service
                 .OrderByDescending(i => i.CreatedAt)
                 .ToListAsync();
 
-            return incidents.Select(i => MapToResponse(i, lang)).ToList();
+           
+            return incidents.Select(i => {
+                var response = MapToResponse(i, lang);
+
+              
+                response.Media = i.IncidentMedia?.Select(m => new IncidentMediaResponse
+                {
+                    Id = m.Id,
+                    Url = $"{baseUrl}{m.Url}",
+                    CreatedAt = m.CreatedAt
+                }).ToList() ?? new List<IncidentMediaResponse>();
+
+                return response;
+            }).ToList();
         }
     }
 }

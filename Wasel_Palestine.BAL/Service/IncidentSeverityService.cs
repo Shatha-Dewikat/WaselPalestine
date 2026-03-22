@@ -57,7 +57,11 @@ namespace Wasel_Palestine.BLL.Service
             if (await _repository.ExistsByNameAsync(request.Name))
                 throw new InvalidOperationException($"Severity '{request.Name}' already exists.");
 
-            var severity = new IncidentSeverity { Name = request.Name };
+            var severity = new IncidentSeverity
+            {
+                Name = request.Name,
+                Level = request.Level 
+            };
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
@@ -107,6 +111,7 @@ namespace Wasel_Palestine.BLL.Service
             try
             {
                 severity.Name = request.Name;
+                severity.Level = request.Level; 
                 await _repository.UpdateAsync(severity);
 
                 await _context.AuditLogs.AddAsync(new AuditLog
@@ -116,7 +121,7 @@ namespace Wasel_Palestine.BLL.Service
                     EntityName = nameof(IncidentSeverity),
                     EntityId = severity.Id,
                     Timestamp = DateTime.UtcNow,
-                    Details = $"Updated severity to: {severity.Name}",
+                    Details = $"Updated severity: {severity.Name} with Level: {severity.Level}",
                     IPAddress = ip,
                     UserAgent = userAgent
                 });

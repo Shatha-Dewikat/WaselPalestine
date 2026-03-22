@@ -22,82 +22,62 @@ namespace Wasel_Palestine.BLL.Service
         {
             try
             {
-             
-                var location = await _repository.GetLocationByIdAsync(request.LocationId);
-                if (location == null)
-                    return new CheckpointResponse
-                    {
-                        Success = false,
-                        Message = "Invalid LocationId",
-                        Errors = new List<string> { $"No Location found with Id = {request.LocationId}" }
-                    };
+                
+                var location = new Location
+                {
+                    Latitude = request.Latitude,
+                    Longitude = request.Longitude,
+                    AreaName = request.AreaName,
+                    City = request.City,
+                    CreatedAt = DateTime.UtcNow
+                };
 
-                var existing = await _repository.GetAllCheckpointsAsync();
-                var duplicate = existing.Any(c =>
-                    c.LocationId == request.LocationId &&
-                    c.DeletedAt == null
-                );
-
-                if (duplicate)
-                    return new CheckpointResponse
-                    {
-                        Success = false,
-                        Message = "Duplicate checkpoint",
-                        Errors = new List<string> { "A checkpoint already exists in this location." }
-                    };
-
-             
+               
                 var checkpoint = new Checkpoint
                 {
                     NameEn = request.NameEn,
                     NameAr = request.NameAr,
                     DescriptionEn = request.DescriptionEn,
                     DescriptionAr = request.DescriptionAr,
-                    LocationId = request.LocationId,
-                    CurrentStatus = request.Status ?? "Pending",
+                    Location = location,
+                    CurrentStatus = request.Status ?? "Open",
                     EstimatedDelayMinutes = request.EstimatedDelayMinutes,
                     CreatedAt = DateTime.UtcNow
                 };
 
+              
                 await _repository.CreateCheckpointAsync(checkpoint);
 
                
-                var created = await _repository.GetCheckpointByIdAsync(checkpoint.Id);
-
-           
                 await _repository.AddStatusHistoryAsync(new CheckpointStatusHistory
                 {
-                    CheckpointId = created.Id,
+                    CheckpointId = checkpoint.Id,
                     OldStatus = "INITIAL",
-                    NewStatus = created.CurrentStatus,
+                    NewStatus = checkpoint.CurrentStatus,
                     ChangedAt = DateTime.UtcNow,
                     ChangedByUserId = userId
                 });
 
-             
                 await _repository.AddAuditLogAsync(new AuditLog
                 {
                     UserId = userId,
                     Action = "CREATE",
                     EntityName = "Checkpoint",
-                    EntityId = created.Id,
+                    EntityId = checkpoint.Id,
                     Timestamp = DateTime.UtcNow,
-                    Details = "Checkpoint created",
+                    Details = $"Checkpoint created: {checkpoint.NameEn}",
                     IPAddress = ip,
                     UserAgent = userAgent
                 });
 
-               
                 return new CheckpointResponse
                 {
                     Success = true,
                     Message = "Checkpoint created successfully",
-                    Id = created.Id,
-                    Name = created.NameEn,
-                    Description = created.DescriptionEn,
-                    Status = created.CurrentStatus,
-                    EstimatedDelayMinutes = created.EstimatedDelayMinutes,
-                    CreatedAt = created.CreatedAt
+                    Id = checkpoint.Id,
+                    Name = checkpoint.NameEn,
+                    Status = checkpoint.CurrentStatus,
+                    CreatedAt = checkpoint.CreatedAt
                 };
             }
             catch (Exception ex)

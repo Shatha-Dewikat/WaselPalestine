@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
+using Wasel_Palestine.DAL.Model;
 
 namespace Wasel_Palestine.BLL.Service
 {
@@ -20,6 +21,7 @@ namespace Wasel_Palestine.BLL.Service
         Task<SimpleResponse> CloseIncidentAsync(int incidentId, string userId);
         Task<SimpleResponse> ResolveIncidentAsync(int incidentId, string userId);
         Task<List<IncidentResponse>> GetIncidentsByCheckpointIdAsync(int checkpointId, string lang = "en");
+        Task<List<CityIncidentStats>> GetDashboardStatsAsync();
 
     }
 }
