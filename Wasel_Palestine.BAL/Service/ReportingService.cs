@@ -87,8 +87,32 @@ namespace Wasel_Palestine.BAL.Service
 
             return "Success: New report submitted successfully.";
         }
-
        
+       public async Task<string> DismissReportAsync(int reportId)
+{
+    var report = await _context.Reports.FindAsync(reportId);
+
+    if (report == null)
+        return "Error: Report not found.";
+
+   
+    report.ConfidenceScore -= 0.2f;
+
+    if (report.ConfidenceScore < 1.0f && report.StatusId == 2)
+    {
+        report.StatusId = 1; 
+    }
+
+    
+    if (report.ConfidenceScore <= 0.31f)
+    {
+        report.StatusId = 4;
+    }
+
+    await _context.SaveChangesAsync();
+    return "Thank you! Your feedback has been recorded.";
+}
+
         private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
         {
             var R = 6371; 

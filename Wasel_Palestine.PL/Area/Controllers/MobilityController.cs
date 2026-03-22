@@ -43,5 +43,16 @@ public async Task<IActionResult> PostReport([FromBody] CreateReportDto reportDto
     
     return Conflict(new { message = result }); // Conflict (409) تعني وجود تكرار
 }
+
+[HttpPost("dismiss-report/{id}")]
+        public async Task<IActionResult> DismissReport(int id)
+        {
+            var result = await _reportingService.DismissReportAsync(id);
+
+            if (result.StartsWith("Error"))
+                return NotFound(new { message = result });
+
+            return Ok(new { message = result });
+        }
     }
 }
