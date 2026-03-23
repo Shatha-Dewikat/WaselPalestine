@@ -22,6 +22,8 @@ namespace Wasel_Palestine.BLL.Service
         Task<SimpleResponse> ResolveIncidentAsync(int incidentId, string userId);
         Task<List<IncidentResponse>> GetIncidentsByCheckpointIdAsync(int checkpointId, string lang = "en");
         Task<List<CityIncidentStats>> GetDashboardStatsAsync();
+        Task AutoCreateWeatherIncidentAsync(double lat, double lon);
+        Task ProcessWeatherIncidentsAsync();
 
     }
 }

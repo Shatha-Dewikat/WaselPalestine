@@ -39,16 +39,12 @@ namespace Wasel_Palestine.PL.Area.Incidents
         [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> UpdateIncident(int id, [FromBody] UpdateIncidentRequest request)
         {
-            try
-            {
+            
                 var result = await _incidentService.UpdateIncidentAsync(id, request, CurrentUserId);
                 if (!result.Success) return NotFound(new { success = false, message = result.Message, errors = result.Errors });
                 return Ok(new { success = true, message = "Incident updated successfully.", data = result });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { success = false, message = $"Unexpected error: {ex.Message}" });
-            }
+            
+          
         }
 
         [HttpDelete("{id}")]
@@ -102,7 +98,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
 
         [HttpGet("filter")]
         [Authorize]
-        [EnableRateLimiting("fixed-by-ip")]
+       // [EnableRateLimiting("fixed-by-ip")]
         public async Task<IActionResult> GetFilteredIncidents([FromQuery] IncidentFilterRequest filter, [FromQuery] string lang = "en")
         {
             try
@@ -227,6 +223,30 @@ namespace Wasel_Palestine.PL.Area.Incidents
             {
                 var stats = await _incidentService.GetDashboardStatsAsync();
                 return Ok(new { success = true, data = stats });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpGet("filtered-paged")]
+        [Authorize]
+        [EnableRateLimiting("fixed-by-ip")]
+        [HttpPost("filtered-paged")] // تم تغييرها لـ POST لتستقبل Body
+        [Authorize]
+        public async Task<IActionResult> GetFilteredPagedIncidents([FromBody] IncidentQueryRequest request, [FromQuery] string lang = "en")
+        {
+            if (request == null) return BadRequest("Request body is empty");
+
+            // قيم افتراضية في حال نسي المستخدم إرسالها
+            request.Pagination ??= new PaginationRequest { PageNumber = 1, PageSize = 10 };
+            request.Filter ??= new IncidentFilterRequest();
+
+            try
+            {
+                var incidents = await _incidentService.GetFilteredPagedIncidentsAsync(request, lang);
+                return Ok(new { success = true, data = incidents });
             }
             catch (Exception ex)
             {

@@ -125,6 +125,8 @@ namespace Wasel_Palestine.PL
             builder.Services.AddScoped<IIncidentMediaService, IncidentMediaService>();
             builder.Services.AddScoped<IFileService, FileService>();
             builder.Services.AddScoped<ICheckpointService, CheckpointService>();
+            builder.Services.AddHttpClient<IWeatherService, WeatherService>();
+            builder.Services.AddHostedService<WeatherBackgroundService>();
             // Repositories
             builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
             builder.Services.AddScoped<IIncidentCategoryRepository, IncidentCategoryRepository>();
