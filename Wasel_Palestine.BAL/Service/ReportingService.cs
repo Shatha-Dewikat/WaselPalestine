@@ -113,6 +113,27 @@ namespace Wasel_Palestine.BAL.Service
     return "Thank you! Your feedback has been recorded.";
 }
 
+
+public async Task<List<ActiveReportDto>> GetActiveReportsAsync()
+{
+    return await _context.Reports
+        .Include(r => r.Category)
+        .Include(r => r.Location)
+        .Where(r => r.StatusId == 2) 
+        .Select(r => new ActiveReportDto
+        {
+            Id = r.Id,
+            Description = r.Description,
+            Latitude = (double)r.Location.Latitude,
+            Longitude = (double)r.Location.Longitude,
+            CategoryName = r.Category.Name,
+            ConfidenceScore = r.ConfidenceScore,
+            CreatedAt = r.CreatedAt
+        })
+        .OrderByDescending(r => r.CreatedAt)
+        .ToListAsync();
+}
+
         private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
         {
             var R = 6371; 
