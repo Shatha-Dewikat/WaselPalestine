@@ -24,6 +24,8 @@ namespace Wasel_Palestine.BLL.Service
         Task<List<CityIncidentStats>> GetDashboardStatsAsync();
         Task AutoCreateWeatherIncidentAsync(double lat, double lon);
         Task ProcessWeatherIncidentsAsync();
+        Task<List<HeatmapPointResponse>> GetIncidentHeatmapAsync(DateTime? fromDate);
+        Task<byte[]> ExportIncidentsToExcelAsync();
 
     }
 }

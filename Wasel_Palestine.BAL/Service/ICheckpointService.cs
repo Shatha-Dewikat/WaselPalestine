@@ -18,5 +18,7 @@ namespace Wasel_Palestine.BLL.Service
         Task<List<CheckpointResponse>> GetFilteredCheckpointsAsync(CheckpointFilterRequest filter, string lang);
         Task<List<CheckpointResponse>> GetPagedCheckpointsAsync(CheckPointPaginationRequest pagination, string lang);
         Task<List<CheckpointHistoryResponse>> GetCheckpointHistoryAsync(int checkpointId);
+        Task<List<CheckpointResponse>> GetNearbyCheckpointsAsync(double userLat, double userLon, double radiusInKm, string lang);
     }
+    
 }

@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Mapster;
+using NetTopologySuite;
+using NetTopologySuite.Geometries;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,7 +26,7 @@ namespace Wasel_Palestine.BLL.Service
             try
             {
                 
-                var location = new Location
+                var location = new DAL.Model.Location
                 {
                     Latitude = request.Latitude,
                     Longitude = request.Longitude,
@@ -417,6 +420,38 @@ namespace Wasel_Palestine.BLL.Service
                 ChangedBy = h.ChangedByUserId,
                 ChangedAt = h.ChangedAt
             }).ToList();
+        }
+
+        public async Task<List<CheckpointResponse>> GetNearbyCheckpointsAsync(double userLat, double userLon, double radiusInKm, string lang)
+        {
+            var geometryFactory = NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
+            var userLocation = geometryFactory.CreatePoint(new Coordinate(userLon, userLat));
+
+            var checkpoints = await _repository.GetAllCheckpointsAsync();
+
+            return checkpoints
+                .Where(c => c.Location != null && c.Location.Coordinates != null) 
+                .Select(c => new
+                {
+                    Data = c,
+                    Distance = c.Location.Coordinates.Distance(userLocation) * 111.32
+                })
+                .Where(x => x.Distance <= radiusInKm)
+                .OrderBy(x => x.Distance)
+                .Take(5)
+                .Select(x => {
+                   
+                    var res = x.Data.Adapt<CheckpointResponse>();
+
+                    res.Distance = Math.Round(x.Distance, 2);
+                    res.Name = (lang == "ar") ? x.Data.NameAr : x.Data.NameEn;
+                    res.Description = (lang == "ar") ? x.Data.DescriptionAr : x.Data.DescriptionEn;
+                    res.Status = x.Data.CurrentStatus; 
+                    res.Success = true;
+
+                    return res;
+                })
+                .ToList();
         }
     }
 }

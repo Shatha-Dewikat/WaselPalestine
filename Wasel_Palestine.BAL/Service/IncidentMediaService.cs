@@ -12,7 +12,7 @@ public class IncidentMediaService : IIncidentMediaService
     private readonly IFileService _fileService;
     private readonly IMemoryCache _cache;
     private const string MediaCacheKey = "IncidentMedia_";
-    private const string IncidentCacheKey = "Incident_"; // كاش الحادث الأساسي
+    private const string IncidentCacheKey = "Incident_"; 
 
     public IncidentMediaService(IIncidentMediaRepository repository, IFileService fileService, IMemoryCache cache)
     {

@@ -188,5 +188,20 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
                 return StatusCode(500, new { success = false, message = $"Error retrieving history: {ex.Message}" });
             }
         }
+
+        [HttpGet("nearby")]
+        [Authorize]
+        public async Task<IActionResult> GetNearby([FromQuery] double lat, [FromQuery] double lon, [FromQuery] double radius = 10, [FromQuery] string lang = "en")
+        {
+            try
+            {
+                var result = await _service.GetNearbyCheckpointsAsync(lat, lon, radius, lang);
+                return Ok(new { success = true, data = result });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
     }
 }

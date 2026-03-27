@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using ClosedXML.Excel;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using System;
@@ -57,8 +58,7 @@ namespace Wasel_Palestine.BLL.Service
         {
             userId ??= GetCurrentUserId();
             using var transaction = await _context.Database.BeginTransactionAsync();
-            try
-            {
+            
                 var exists = await _context.Incidents.AnyAsync(i => i.Title == request.Title);
                 if (exists)
                 {
@@ -135,12 +135,8 @@ namespace Wasel_Palestine.BLL.Service
                 await transaction.CommitAsync();
 
                 return MapToResponse(incident);
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                return new IncidentResponse { Success = false, Message = ex.Message };
-            }
+            
+           
         }
 
         public async Task<IncidentResponse> UpdateIncidentAsync(int id, UpdateIncidentRequest request, string userId = null)
@@ -507,6 +503,74 @@ namespace Wasel_Palestine.BLL.Service
                     ChangedAt = h.ChangedAt
                 }).ToList() ?? new List<IncidentHistoryResponse>()
             };
+        }
+
+        public async Task<List<HeatmapPointResponse>> GetIncidentHeatmapAsync(DateTime? fromDate)
+        {
+            fromDate ??= DateTime.UtcNow.AddMonths(-1);
+
+            var data = await _context.Incidents
+                .Include(i => i.Location)
+                .Where(i => i.CreatedAt >= fromDate && i.Location != null)
+                .GroupBy(i => new {
+                    Lat = Math.Round((double)i.Location.Latitude, 3),
+                    Lon = Math.Round((double)i.Location.Longitude, 3)
+                })
+                .Select(g => new HeatmapPointResponse
+                {
+                    Latitude = g.Key.Lat,
+                    Longitude = g.Key.Lon,
+                    Intensity = g.Count()
+                })
+                .ToListAsync();
+
+            return data;
+        }
+
+        public async Task<byte[]> ExportIncidentsToExcelAsync()
+        {
+            var incidents = await _context.Incidents
+                .Include(i => i.Category)
+                .Include(i => i.Severity)
+                .Include(i => i.Status)
+                .Include(i => i.Location)
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
+
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Incidents Report");
+
+                var headers = new string[] { "ID", "Title", "Category", "Severity", "Status", "Area", "Date" };
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    var cell = worksheet.Cell(1, i + 1);
+                    cell.Value = headers[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.LightBlue;
+                }
+
+                int row = 2;
+                foreach (var item in incidents)
+                {
+                    worksheet.Cell(row, 1).Value = item.Id;
+                    worksheet.Cell(row, 2).Value = item.Title;
+                    worksheet.Cell(row, 3).Value = item.Category?.Name ?? "N/A";
+                    worksheet.Cell(row, 4).Value = item.Severity?.Name?? "N/A";
+                    worksheet.Cell(row, 5).Value = item.Status?.Name ?? "N/A";
+                    worksheet.Cell(row, 6).Value = item.Location?.AreaName ?? "N/A";
+                    worksheet.Cell(row, 7).Value = item.CreatedAt.ToString("yyyy-MM-dd HH:mm");
+                    row++;
+                }
+
+                worksheet.Columns().AdjustToContents(); 
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    return stream.ToArray();
+                }
+            }
         }
 
         public async Task<List<IncidentResponse>> GetIncidentsByCheckpointIdAsync(int checkpointId, string lang = "en")

@@ -22,8 +22,12 @@ namespace Wasel_Palestine.PL
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddMemoryCache();
             // ----------------- DbContext -----------------
+            // في ملف Program.cs ابحث عن الجزء الخاص بالـ DbContext وعدله هكذا:
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(
+                    builder.Configuration.GetConnectionString("DefaultConnection"),
+                    x => x.UseNetTopologySuite() // <--- هذا السطر هو الذي يحل مشكلة الـ Point.UserData
+                ));
 
             // ----------------- Identity -----------------
             builder.Services.AddIdentity<User, Role>(options =>
@@ -153,6 +157,30 @@ namespace Wasel_Palestine.PL
             // ----------------- Build & Run -----------------
             MapsterConfig.RegisterMappings();
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var context = services.GetRequiredService<ApplicationDbContext>();
+
+                // جلب الحواجز التي تملك موقعاً ولكن ليس لها إحداثيات جغرافية (Point)
+                var checkpointsToUpdate = await context.Checkpoints
+                    .Include(c => c.Location)
+                    .Where(c => c.Location != null && (c.Location.Coordinates == null))
+                    .ToListAsync();
+
+                if (checkpointsToUpdate.Any())
+                {
+                    var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
+                    foreach (var cp in checkpointsToUpdate)
+                    {
+                        // تحويل الـ decimal/double المخزن في قاعدة البيانات إلى Point
+                        cp.Location.Coordinates = factory.CreatePoint(new NetTopologySuite.Geometries.Coordinate((double)cp.Location.Longitude, (double)cp.Location.Latitude));
+                    }
+                    await context.SaveChangesAsync();
+                    Console.WriteLine($"✅ Done! Updated {checkpointsToUpdate.Count} checkpoints with GPS Coordinates.");
+                }
+            }
             app.UseRateLimiter();
             app.UseStaticFiles();
             app.UseAuthentication();

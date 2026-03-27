@@ -46,6 +46,7 @@ namespace Wasel_Palestine.DAL.Repository
         public async Task<List<Checkpoint>> GetAllCheckpointsAsync()
         {
             return await _context.Checkpoints
+                .Include(c => c.Location)
                .Where(c => c.DeletedAt == null)
                .ToListAsync();
         }

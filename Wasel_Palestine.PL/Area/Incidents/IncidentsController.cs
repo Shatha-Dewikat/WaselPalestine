@@ -23,18 +23,37 @@ namespace Wasel_Palestine.PL.Area.Incidents
         [EnableRateLimiting("strict-by-ip")]
         public async Task<IActionResult> CreateIncident([FromBody] CreateIncidentRequest request)
         {
-            try
-            {
+            
                 var result = await _incidentService.CreateIncidentAsync(request, CurrentUserId);
                 if (!result.Success) return BadRequest(new { success = false, message = result.Message, errors = result.Errors });
                 return Ok(new { success = true, message = "Incident created and checkpoint status updated.", data = result });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { success = false, message = $"Unexpected error: {ex.Message}" });
-            }
+            
+           
         }
 
+        [HttpGet("heatmap")]
+        [Authorize]
+        [EnableRateLimiting("fixed-by-ip")]
+        public async Task<IActionResult> GetHeatmap([FromQuery] DateTime? fromDate)
+        {
+           
+            var stats = await _incidentService.GetIncidentHeatmapAsync(fromDate);
+            return Ok(new { success = true, data = stats });
+        }
+
+        [HttpGet("export")]
+        [Authorize(Roles = "Admin,Moderator")]
+        [EnableRateLimiting("fixed-by-ip")]
+        public async Task<IActionResult> ExportToExcel()
+        {
+            var fileContents = await _incidentService.ExportIncidentsToExcelAsync();
+
+            return File(
+                fileContents,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Incidents_Report_{DateTime.Now:yyyyMMdd}.xlsx"
+            );
+        }
         [HttpPut("{id}")]
         [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> UpdateIncident(int id, [FromBody] UpdateIncidentRequest request)
@@ -98,7 +117,7 @@ namespace Wasel_Palestine.PL.Area.Incidents
 
         [HttpGet("filter")]
         [Authorize]
-       // [EnableRateLimiting("fixed-by-ip")]
+        [EnableRateLimiting("fixed-by-ip")]
         public async Task<IActionResult> GetFilteredIncidents([FromQuery] IncidentFilterRequest filter, [FromQuery] string lang = "en")
         {
             try
@@ -233,13 +252,13 @@ namespace Wasel_Palestine.PL.Area.Incidents
         [HttpGet("filtered-paged")]
         [Authorize]
         [EnableRateLimiting("fixed-by-ip")]
-        [HttpPost("filtered-paged")] // تم تغييرها لـ POST لتستقبل Body
+        [HttpPost("filtered-paged")] 
         [Authorize]
         public async Task<IActionResult> GetFilteredPagedIncidents([FromBody] IncidentQueryRequest request, [FromQuery] string lang = "en")
         {
             if (request == null) return BadRequest("Request body is empty");
 
-            // قيم افتراضية في حال نسي المستخدم إرسالها
+            
             request.Pagination ??= new PaginationRequest { PageNumber = 1, PageSize = 10 };
             request.Filter ??= new IncidentFilterRequest();
 

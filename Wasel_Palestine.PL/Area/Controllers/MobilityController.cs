@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Wasel_Palestine.BLL.Service;
 
 namespace Wasel_Palestine.PL.Area.Controllers
@@ -18,6 +19,7 @@ namespace Wasel_Palestine.PL.Area.Controllers
 
       
         [HttpGet("weather")]
+        [Authorize]
         public async Task<IActionResult> GetWeather([FromQuery] double lat, [FromQuery] double lon)
         {
             var result = await _weatherService.GetCurrentWeatherAsync(lat, lon);
@@ -26,6 +28,7 @@ namespace Wasel_Palestine.PL.Area.Controllers
 
        
         [HttpPost("process-weather-incidents")]
+        [Authorize]
         public async Task<IActionResult> ProcessWeatherIncidents()
         {
             await _incidentService.ProcessWeatherIncidentsAsync();

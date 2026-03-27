@@ -18,6 +18,7 @@ namespace Wasel_Palestine.DAL.DTO.Response
 
         public double ConfidenceScore { get; set; }
         public DateTime CreatedAt { get; set; }
+        public double Distance { get; set; }
 
     }
 }
