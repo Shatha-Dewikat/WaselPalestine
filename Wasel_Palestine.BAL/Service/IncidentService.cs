@@ -19,14 +19,16 @@ namespace Wasel_Palestine.BLL.Service
     public class IncidentService : IIncidentService
     {
         private readonly IIncidentRepository _incidentRepo;
+        private readonly IAlertService _alertService;
         private readonly ApplicationDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IWeatherService _weatherService;
         private readonly IMemoryCache _cache;
         private const string DashboardCacheKey = "CityStatsCache";
-        public IncidentService(IIncidentRepository incidentRepo, IWeatherService weatherService, ApplicationDbContext context, IHttpContextAccessor httpContextAccessor, IMemoryCache cache)
+        public IncidentService(IIncidentRepository incidentRepo, IAlertService alertService, IWeatherService weatherService, ApplicationDbContext context, IHttpContextAccessor httpContextAccessor, IMemoryCache cache)
         {
             _incidentRepo = incidentRepo;
+            _alertService = alertService;
             _weatherService = weatherService;
             _context = context;
             _httpContextAccessor = httpContextAccessor;
@@ -179,13 +181,28 @@ namespace Wasel_Palestine.BLL.Service
         {
             var incident = await _context.Incidents.FindAsync(incidentId);
             var status = await _context.IncidentStatuses.FirstOrDefaultAsync(s => s.Name == "Verified");
+
             if (incident == null || status == null) return new SimpleResponse { Success = false };
 
             incident.StatusId = status.Id;
             incident.Verified = true;
             incident.VerifiedAt = DateTime.UtcNow;
 
-            _context.IncidentHistories.Add(new IncidentHistory { IncidentId = incidentId, StatusId = status.Id, ChangedByUserId = userId, ChangedAt = DateTime.UtcNow, Action = "Verified" });
+            _context.IncidentHistories.Add(new IncidentHistory
+            {
+                IncidentId = incidentId,
+                StatusId = status.Id,
+                ChangedByUserId = userId,
+                ChangedAt = DateTime.UtcNow,
+                Changes = "Incident status changed to Verified",
+                Action = "Verified"
+            });
+
+            await _alertService.CreateAlertAsync(new AlertCreateRequest
+            {
+                IncidentId = incidentId
+            }, userId, GetIP(), GetUserAgent());
+
             await _context.SaveChangesAsync();
             return new SimpleResponse { Success = true };
         }
@@ -431,7 +448,14 @@ namespace Wasel_Palestine.BLL.Service
 
             _context.Incidents.Add(incident);
             await _context.SaveChangesAsync();
-            Console.WriteLine($"Incident created successfully: {incident.Title}");
+            await _alertService.CreateAlertAsync(new AlertCreateRequest
+            {
+                IncidentId = incident.Id
+            },
+      "SYSTEM_WEATHER_SERVICE", 
+      "INTERNAL_SERVER",       
+      "Wasel_Weather_Engine_v1" 
+      );
         }
 
         public async Task ProcessWeatherIncidentsAsync()

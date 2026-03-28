@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
+using Wasel_Palestine.DAL.Model;
 
 namespace Wasel_Palestine.BLL.Service
 {
@@ -13,5 +14,6 @@ namespace Wasel_Palestine.BLL.Service
         Task DeleteAlertAsync(int id, string userId, string ip, string userAgent);
         Task<AlertResponse> GetAlertByIdAsync(int id, string lang);
         Task<List<AlertResponse>> GetAllAlertsAsync(string lang);
+        Task<List<AlertHistory>> GetAlertHistoryAsync(int alertId);
     }
 }

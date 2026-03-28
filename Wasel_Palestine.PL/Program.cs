@@ -131,6 +131,7 @@ namespace Wasel_Palestine.PL
             builder.Services.AddScoped<ICheckpointService, CheckpointService>();
             builder.Services.AddHttpClient<IWeatherService, WeatherService>();
             builder.Services.AddHostedService<WeatherBackgroundService>();
+            builder.Services.AddScoped<IAlertService, AlertService>();
             // Repositories
             builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
             builder.Services.AddScoped<IIncidentCategoryRepository, IncidentCategoryRepository>();
@@ -140,6 +141,7 @@ namespace Wasel_Palestine.PL
             builder.Services.AddScoped<IIncidentMediaRepository, IncidentMediaRepository>();
             builder.Services.AddScoped<ICheckpointRepository, CheckpointRepository>();
             builder.Services.AddScoped<ICheckpointStatusRepository, CheckpointStatusRepository>();
+            builder.Services.AddScoped<IAlertRepository, AlertRepository>();
 
             // Seeders
             builder.Services.AddScoped<RoleSeedData>();
@@ -163,7 +165,6 @@ namespace Wasel_Palestine.PL
                 var services = scope.ServiceProvider;
                 var context = services.GetRequiredService<ApplicationDbContext>();
 
-                // جلب الحواجز التي تملك موقعاً ولكن ليس لها إحداثيات جغرافية (Point)
                 var checkpointsToUpdate = await context.Checkpoints
                     .Include(c => c.Location)
                     .Where(c => c.Location != null && (c.Location.Coordinates == null))
@@ -174,7 +175,7 @@ namespace Wasel_Palestine.PL
                     var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
                     foreach (var cp in checkpointsToUpdate)
                     {
-                        // تحويل الـ decimal/double المخزن في قاعدة البيانات إلى Point
+                       
                         cp.Location.Coordinates = factory.CreatePoint(new NetTopologySuite.Geometries.Coordinate((double)cp.Location.Longitude, (double)cp.Location.Latitude));
                     }
                     await context.SaveChangesAsync();

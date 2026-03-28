@@ -4,11 +4,11 @@ using System.Text;
 
 namespace Wasel_Palestine.DAL.DTO.Response
 {
-    public class AlertResponse
+    public class AlertResponse : BaseResponse
     {
         public int Id { get; set; }
         public int IncidentId { get; set; }
-        public string Message { get; set; } 
+        
         public DateTime CreatedAt { get; set; }
     }
 }

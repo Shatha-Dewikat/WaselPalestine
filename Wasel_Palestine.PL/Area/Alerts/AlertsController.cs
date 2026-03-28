@@ -45,7 +45,7 @@ namespace Wasel_Palestine.PL.Area.Alerts
         [Authorize(Roles = "Moderator,Admin")]
         public async Task<IActionResult> Delete(int id)
         {
-            var userId = User.FindFirst("UserId")?.Value;
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "N/A";
             var userAgent = Request.Headers["User-Agent"].ToString() ?? "N/A";
 
@@ -68,6 +68,14 @@ namespace Wasel_Palestine.PL.Area.Alerts
         {
             var alerts = await _alertService.GetAllAlertsAsync(lang);
             return Ok(alerts);
+        }
+
+        [HttpGet("{id}/history")]
+        [Authorize(Roles = "Moderator,Admin")]
+        public async Task<IActionResult> GetAlertHistory(int id)
+        {
+            var history = await _alertService.GetAlertHistoryAsync(id);
+            return Ok(new { success = true, data = history });
         }
     }
 }
