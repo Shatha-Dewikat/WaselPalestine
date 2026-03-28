@@ -134,6 +134,31 @@ public async Task<List<ActiveReportDto>> GetActiveReportsAsync()
         .ToListAsync();
 }
 
+public async Task<string> SubscribeToAlertAsync(SubscribeAlertDto subscriptionDto)
+{
+   
+    var isSubscribed = await _context.AlertSubscriptions
+        .AnyAsync(s => s.UserId == subscriptionDto.UserId && 
+                       s.LocationId == subscriptionDto.LocationId && 
+                       s.CategoryId == subscriptionDto.CategoryId);
+
+    if (isSubscribed)
+        return "You are already subscribed to alerts for this location and category.";
+
+    var subscription = new AlertSubscription
+    {
+        UserId = subscriptionDto.UserId,
+        LocationId = subscriptionDto.LocationId,
+        CategoryId = subscriptionDto.CategoryId,
+        CreatedAt = DateTime.Now
+    };
+
+    _context.AlertSubscriptions.Add(subscription);
+    await _context.SaveChangesAsync();
+
+    return "Success: You will now receive alerts for this location.";
+}
+
         private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
         {
             var R = 6371; 

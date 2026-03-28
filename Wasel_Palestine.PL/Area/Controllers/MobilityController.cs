@@ -97,5 +97,15 @@ namespace Wasel_Palestine.PL.Area.Controllers
                 return BadRequest(new { message = "An error occurred while fetching active reports.", error = ex.Message });
             }
         }
+        [HttpPost("subscribe-alert")]
+public async Task<IActionResult> SubscribeAlert([FromBody] SubscribeAlertDto subscriptionDto)
+{
+    var result = await _reportingService.SubscribeToAlertAsync(subscriptionDto);
+    
+    if (result.StartsWith("Success"))
+        return Ok(new { message = result });
+
+    return BadRequest(new { message = result });
+}
     }
 }
