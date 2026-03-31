@@ -74,6 +74,7 @@ namespace Wasel_Palestine.BAL.Service
 
             foreach (var sub in subscribers)
             {
+                
                 var alert = new AlertHistory 
                 {
                     AlertId = existingDuplicate.Id,
