@@ -14,79 +14,86 @@ namespace Wasel_Palestine.BAL.Service
             _context = context;
         }
 
-        public async Task<string> SubmitReportAsync(CreateReportDto reportDto)
+       public async Task<string> SubmitReportAsync(CreateReportDto reportDto)
+{
+    var thresholdTime = DateTime.Now.AddHours(-2);
+
+    var existingReports = await _context.Reports
+        .Include(r => r.Location)
+        .Where(r => r.CategoryId == reportDto.CategoryId && r.CreatedAt >= thresholdTime)
+        .ToListAsync();
+
+    Report existingDuplicate = null;
+
+    foreach (var report in existingReports)
+    {
+        double distance = CalculateDistance(
+            (double)reportDto.Latitude, (double)reportDto.Longitude,
+            (double)report.Location.Latitude, (double)report.Location.Longitude);
+
+        if (distance <= 0.5) 
         {
-            
-            var thresholdTime = DateTime.Now.AddHours(-2);
+            existingDuplicate = report;
+            break;
+        }
+    }
+
+
+    var newReport = new Report
+    {
+        Location = new Location
+        {
+            Latitude = reportDto.Latitude,
+            Longitude = reportDto.Longitude,
+            AreaName = "Manual Report",
+            City = "Unknown",
+            CreatedAt = DateTime.Now
+        },
+        Description = reportDto.Description,
+        CategoryId = reportDto.CategoryId,
+        UserId = reportDto.UserId,
+        CreatedAt = DateTime.Now,
+        StatusId = 1, 
+        ConfidenceScore = 0.5f
+    };
+
+    if (existingDuplicate != null)
+    {
+        newReport.DuplicateOfReportId = existingDuplicate.Id;
+        existingDuplicate.ConfidenceScore += 0.2f;
+
+        
+        if (existingDuplicate.ConfidenceScore >= 1.0f && existingDuplicate.StatusId != 2)
+        {
+            existingDuplicate.StatusId = 2;
 
             
-            var existingReports = await _context.Reports
-                .Include(r => r.Location)
-                .Where(r => r.CategoryId == reportDto.CategoryId && r.CreatedAt >= thresholdTime)
+            var subscribers = await _context.AlertSubscriptions
+                .Where(s => s.LocationId == existingDuplicate.LocationId && s.CategoryId == existingDuplicate.CategoryId)
                 .ToListAsync();
 
-            Report existingDuplicate = null;
-
-            
-            foreach (var report in existingReports)
+            foreach (var sub in subscribers)
             {
-                double distance = CalculateDistance(
-                    (double)reportDto.Latitude, (double)reportDto.Longitude,
-                    (double)report.Location.Latitude, (double)report.Location.Longitude);
-
-                if (distance <= 0.5)
+                var alert = new AlertHistory 
                 {
-                    existingDuplicate = report;
-                    break;
-                }
+                    AlertId = existingDuplicate.Id,
+        Status = "Confirmed", 
+        Timestamp = DateTime.Now 
+                };
+                _context.AlertHistories.Add(alert);
             }
-
-          
-            var newReport = new Report
-            {
-                Location = new Location
-                {
-                    Latitude = reportDto.Latitude,
-                    Longitude = reportDto.Longitude,
-                    AreaName = "Manual Report",
-                    City = "Unknown",
-                    CreatedAt = DateTime.Now
-                },
-                Description = reportDto.Description,
-                CategoryId = reportDto.CategoryId,
-                UserId = reportDto.UserId,
-                CreatedAt = DateTime.Now,
-                StatusId = 1, 
-                ConfidenceScore = 0.5f
-            };
-
-           
-            if (existingDuplicate != null)
-            {
-             
-                newReport.DuplicateOfReportId = existingDuplicate.Id;
-
-                
-                existingDuplicate.ConfidenceScore += 0.2f;
-
-                
-                if (existingDuplicate.ConfidenceScore >= 1.0f)
-                {
-                    existingDuplicate.StatusId = 2;
-                }
-
-                _context.Reports.Add(newReport);
-                await _context.SaveChangesAsync();
-
-                return "Thank you! Your report confirmed an existing incident and improved its reliability.";
-            }
-
-           
-            _context.Reports.Add(newReport);
-            await _context.SaveChangesAsync();
-
-            return "Success: New report submitted successfully.";
         }
+
+        _context.Reports.Add(newReport);
+        await _context.SaveChangesAsync();
+        return "Thank you! Your report confirmed an existing incident and triggered alerts for subscribers.";
+    }
+
+   
+    _context.Reports.Add(newReport);
+    await _context.SaveChangesAsync();
+    return "Success: New report submitted successfully.";
+}
        
        public async Task<string> DismissReportAsync(int reportId)
 {
