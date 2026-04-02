@@ -1,8 +1,9 @@
-namespace Wasel_Palestine.PL.DTO.Auth
+namespace Wasel_Palestine.DAL.DTO.Response
 {
     public class AuthResponse
     {
         public string AccessToken { get; set; } = "";
         public string RefreshToken { get; set; } = "";
+        
     }
 }

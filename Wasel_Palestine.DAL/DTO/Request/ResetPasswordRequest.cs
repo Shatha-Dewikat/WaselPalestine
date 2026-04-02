@@ -1,4 +1,4 @@
-namespace Wasel_Palestine.PL.DTO.Auth
+namespace Wasel_Palestine.DAL.DTO.Request
 {
     public class ResetPasswordRequest
     {

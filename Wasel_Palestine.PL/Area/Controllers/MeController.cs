@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
-namespace Wasel_Palestine.PL.Controllers
+namespace Wasel_Palestine.PL.Area.Controllers
 {
     [ApiController]
     [Route("api/me")]
@@ -19,5 +19,6 @@ namespace Wasel_Palestine.PL.Controllers
                 roles = User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value).ToList()
             });
         }
+        
     }
 }

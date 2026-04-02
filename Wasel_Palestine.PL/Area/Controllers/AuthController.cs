@@ -4,14 +4,14 @@ using Microsoft.EntityFrameworkCore;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Utils;
-using Wasel_Palestine.PL.DTO.Auth;
+using Wasel_Palestine.DAL.DTO.Request;
+using Wasel_Palestine.DAL.DTO.Response;
 using Microsoft.AspNetCore.Authorization;
 using System.Text.Encodings.Web;
-
-
 using System.Security.Claims;
 
-namespace Wasel_Palestine.PL.Controllers
+
+namespace Wasel_Palestine.PL.Area.Controllers
 {
     
     [ApiController]
@@ -289,7 +289,7 @@ public async Task<IActionResult> RevokeSession(int refreshTokenId)
     return Ok(new { message = "Session revoked" });
 }
 [HttpPost("forgot-password")]
-public async Task<IActionResult> ForgotPassword(Wasel_Palestine.PL.DTO.Auth.ForgotPasswordRequest req)
+public async Task<IActionResult> ForgotPassword(Wasel_Palestine.DAL.DTO.Request.ForgotPasswordRequest req)
 {
     var user = await _userManager.FindByEmailAsync(req.Email);
 
@@ -309,27 +309,16 @@ public async Task<IActionResult> ForgotPassword(Wasel_Palestine.PL.DTO.Auth.Forg
         await _email.SendAsync(req.Email, "Reset your password",
             $"<p>Click to reset your password:</p><a href='{resetUrl}'>Reset Password</a>");
     }
-    catch
-    {
-        if (HttpContext.RequestServices.GetService<IHostEnvironment>()?.IsDevelopment() == true)
-        {
-            return Ok(new
-            {
-                message = "DEV MODE: Email not configured. Use token below.",
-                email = req.Email,
-                token = token
-            });
-        }
-
-        throw;
-    }
-
+    catch (Exception ex)
+{
+    return StatusCode(500, $"Failed to send email: {ex.Message}");
+}
     await _audit.LogAsync(user.Id, "FORGOT_PASSWORD", "User", 0, "Password reset requested", GetIp(), GetUA());
     return Ok(new { message = "If the email exists, a reset link was sent." });
 }
 
 [HttpPost("reset-password")]
-public async Task<IActionResult> ResetPassword(Wasel_Palestine.PL.DTO.Auth.ResetPasswordRequest req)
+public async Task<IActionResult> ResetPassword(Wasel_Palestine.DAL.DTO.Request.ResetPasswordRequest req)
 {
     var user = await _userManager.FindByEmailAsync(req.Email);
     if (user == null) return BadRequest("Invalid request");
@@ -351,6 +340,33 @@ public async Task<IActionResult> ResetPassword(Wasel_Palestine.PL.DTO.Auth.Reset
     return Ok(new { message = "Password updated" });
 }
 
+[HttpPost("change-password")]
+[Authorize]
+public async Task<IActionResult> ChangePassword(ChangePasswordRequest req)
+{
+    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+    if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+    var user = await _userManager.FindByIdAsync(userId);
+    if (user == null) return Unauthorized();
+
+    var res = await _userManager.ChangePasswordAsync(user, req.CurrentPassword, req.NewPassword);
+    if (!res.Succeeded) return BadRequest(res.Errors);
+
+    // ✅ revoke all refresh tokens (logout all devices)
+    var tokens = await _db.RefreshTokens.Where(t => t.UserId == user.Id && !t.IsRevoked).ToListAsync();
+    foreach (var t in tokens)
+    {
+        t.IsRevoked = true;
+        t.RevokedAt = DateTime.UtcNow;
+        t.ReplacedByToken = "Password changed";
+    }
+    await _db.SaveChangesAsync();
+
+    await _audit.LogAsync(user.Id, "CHANGE_PASSWORD", "User", 0, "Password changed + sessions revoked", GetIp(), GetUA());
+
+    return Ok(new { message = "Password changed" });
+}
 
     }
 }

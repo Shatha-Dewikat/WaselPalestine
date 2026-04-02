@@ -1,10 +1,10 @@
-namespace Wasel_Palestine.PL.DTO.Auth
+namespace Wasel_Palestine.DAL.DTO.Request
 {
-    public class RegisterRequest
+    public class LoginRequest
     {
-        public string FullName { get; set; } = "";
         public string Email { get; set; } = "";
         public string Password { get; set; } = "";
         
+        public string? DeviceInfo { get; set; }
     }
 }
