@@ -8,9 +8,13 @@ using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Utils;
+ using Microsoft.AspNetCore.RateLimiting;
 
-namespace Wasel_Palestine.PL.Controllers
+namespace Wasel_Palestine.PL.Area.Controllers
 {
+   
+
+[EnableRateLimiting("auth")]
     [ApiController]
     [Route("api/auth")]
     public class AuthController : ControllerBase
@@ -203,7 +207,33 @@ namespace Wasel_Palestine.PL.Controllers
             await _db.SaveChangesAsync();
             await _audit.LogAsync(userId, "REVOKE_ALL", "RefreshToken", 0, reason, GetIp(), GetUA());
         }
+         
+         [HttpPost("resend-confirmation")]
+[AllowAnonymous]
+public async Task<IActionResult> ResendConfirmation(ForgotPasswordRequest req)
+{
+    var user = await _userManager.FindByEmailAsync(req.Email);
 
+    // لا نكشف إذا الإيميل موجود أو لا
+    if (user == null)
+        return Ok(new { message = "If the email exists, a confirmation link was sent." });
+
+    if (user.EmailConfirmed)
+        return Ok(new { message = "Email already confirmed." });
+
+    var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+    var confirmBase = _config["Frontend:ConfirmEmailUrl"] ?? "http://localhost:5034/api/auth/confirm-email";
+    var confirmUrl =
+        $"{confirmBase}?userId={Uri.EscapeDataString(user.Id)}&token={Uri.EscapeDataString(token)}";
+
+    await _email.SendAsync(user.Email!, "Confirm your email (Resent)",
+        $"<p>Click to confirm your email:</p><a href='{confirmUrl}'>Confirm Email</a>");
+
+    await _audit.LogAsync(user.Id, "RESEND_CONFIRM_EMAIL", "User", 0, "Confirmation email resent", GetIp(), GetUA());
+
+    return Ok(new { message = "If the email exists, a confirmation link was sent." });
+}
         private string GetIp() => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         private string GetUA() => Request.Headers.UserAgent.ToString();
     }

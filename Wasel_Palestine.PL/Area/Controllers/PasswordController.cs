@@ -7,9 +7,13 @@ using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Utils;
+using Microsoft.AspNetCore.RateLimiting;
 
-namespace Wasel_Palestine.PL.Controllers
+namespace Wasel_Palestine.PL.Area.Controllers
 {
+    
+
+[EnableRateLimiting("auth")]
     [ApiController]
     [Route("api/auth/password")]
     public class PasswordController : ControllerBase
@@ -35,6 +39,8 @@ namespace Wasel_Palestine.PL.Controllers
         }
 
         // POST /api/auth/password/forgot
+       
+
         [HttpPost("forgot")]
         [AllowAnonymous]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest req)
@@ -117,6 +123,8 @@ namespace Wasel_Palestine.PL.Controllers
             await _audit.LogAsync(user.Id, "CHANGE_PASSWORD", "User", 0, "Password changed + sessions revoked", GetIp(), GetUA());
             return Ok(new { message = "Password changed" });
         }
+
+        
 
         private string GetIp() => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         private string GetUA() => Request.Headers.UserAgent.ToString();

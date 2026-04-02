@@ -6,7 +6,8 @@ using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Utils;
 
-namespace Wasel_Palestine.PL.Controllers
+
+namespace Wasel_Palestine.PL.Area.Controllers
 {
     [ApiController]
     [Route("api/admin/users")]
@@ -15,15 +16,17 @@ namespace Wasel_Palestine.PL.Controllers
     {
         private readonly UserManager<User> _userManager;
         private readonly AuditLogger _audit;
-        private readonly ApplicationDbContext _db;   // ✅ جديد
+        private readonly ApplicationDbContext _db;   
 
-        // ✅ عدّلنا الكونستركتر عشان يدخل DbContext
-        public AdminUsersController(UserManager<User> userManager, AuditLogger audit, ApplicationDbContext db)
-        {
-            _userManager = userManager;
-            _audit = audit;
-            _db = db;
-        }
+        private readonly EmailService _email;
+
+public AdminUsersController(UserManager<User> userManager, AuditLogger audit, ApplicationDbContext db, EmailService email)
+{
+    _userManager = userManager;
+    _audit = audit;
+    _db = db;
+    _email = email;
+}
 
         // GET: /api/admin/users
         [HttpGet]
@@ -166,6 +169,47 @@ public async Task<IActionResult> UnlockUser(string userId)
 
             return Ok(new { message = "User activated" });
         }
+        [HttpPost("{userId}/reset-password")]
+public async Task<IActionResult> AdminResetPassword(string userId, [FromBody] string? tempPassword)
+{
+    var user = await _userManager.FindByIdAsync(userId);
+    if (user == null) return NotFound("User not found");
+
+    // Generate temp password if not provided
+   var pw = string.IsNullOrWhiteSpace(tempPassword)
+    ? ("Tmp@" + Guid.NewGuid().ToString("N")).Substring(0, 12) + "!"
+    : tempPassword;
+
+    // Reset password using Identity reset token
+    var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+    var resetRes = await _userManager.ResetPasswordAsync(user, resetToken, pw);
+    if (!resetRes.Succeeded) return BadRequest(resetRes.Errors);
+
+    // Revoke all refresh tokens (logout all devices)
+    var tokens = await _db.RefreshTokens.Where(t => t.UserId == user.Id && !t.IsRevoked).ToListAsync();
+    foreach (var t in tokens)
+    {
+        t.IsRevoked = true;
+        t.RevokedAt = DateTime.UtcNow;
+        t.ReplacedByToken = "Admin reset password";
+    }
+    await _db.SaveChangesAsync();
+
+    // Ensure user is active
+    if (!user.IsActive)
+    {
+        user.IsActive = true;
+        await _userManager.UpdateAsync(user);
+    }
+
+    // Email notification
+    await _email.SendAsync(user.Email!, "Your password was reset",
+        $"<p>Your password was reset by admin.</p><p><b>Temporary Password:</b> {pw}</p><p>Please login and change it immediately.</p>");
+
+    await _audit.LogAsync(user.Id, "ADMIN_RESET_PASSWORD", "User", 0, "Admin reset password + revoked sessions", GetIp(), GetUA());
+
+    return Ok(new { message = "Password reset and emailed", pw });
+}
 
         private string GetIp() => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         private string GetUA() => Request.Headers.UserAgent.ToString();

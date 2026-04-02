@@ -6,6 +6,8 @@ using System.Text;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Utils;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Http;
 
 namespace Wasel_Palestine.PL
 {
@@ -78,6 +80,18 @@ Console.WriteLine($"JWT Issuer={jwt["Issuer"]} | Audience={jwt["Audience"]} | Ke
                 options.AddPolicy("ActiveUserOnly", p => p.RequireClaim("isActive", "true"));
             });
 
+builder.Services.AddRateLimiter(options =>
+{
+   
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("auth", opt =>
+    {
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.PermitLimit = 10; // 10 requests/minute
+        opt.QueueLimit = 0;
+    });
+});
             // Controllers
            builder.Services.AddControllers(options =>
 {
@@ -102,6 +116,7 @@ Console.WriteLine($"JWT Issuer={jwt["Issuer"]} | Audience={jwt["Audience"]} | Ke
 
             app.UseStaticFiles();
 
+app.UseRateLimiter();
             // ✅ مؤقتًا شلنا HTTPS Redirection لتجنب مشاكل Authorization header
             // app.UseHttpsRedirection();
 
@@ -121,6 +136,8 @@ Console.WriteLine($"JWT Issuer={jwt["Issuer"]} | Audience={jwt["Audience"]} | Ke
 
                 var statusSeeder = services.GetRequiredService<ReportStatusSeedData>();
                 await statusSeeder.DataSeed();
+
+                
             }
 
             if (app.Environment.IsDevelopment())
