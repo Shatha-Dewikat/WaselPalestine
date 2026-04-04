@@ -21,7 +21,6 @@ namespace Wasel_Palestine.BAL.Service
 
         public async Task<WeatherResponseDto> GetCurrentWeatherAsync(double lat, double lon)
         {
-            // نظام الـ Caching من شغل شذى - لحفظ النتائج لمدة 30 دقيقة
             string cacheKey = $"weather_{Math.Round(lat, 2)}_{Math.Round(lon, 2)}";
 
             if (_cache.TryGetValue(cacheKey, out WeatherResponseDto cachedWeather))
