@@ -11,6 +11,6 @@ namespace Wasel_Palestine.DAL.Model
         public Alert Alert { get; set; }
 
         public string Status { get; set; }
-        public DateTime Timestamp { get; set; }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     }
 }

@@ -8,7 +8,7 @@ using Wasel_Palestine.PL.DTOs;
 
 namespace Wasel_Palestine.BAL.Service
 {
-    public class WeatherService
+    public class WeatherService : IWeatherService
     {
         private readonly HttpClient _httpClient;
         private readonly IMemoryCache _cache;
@@ -23,6 +23,7 @@ namespace Wasel_Palestine.BAL.Service
         {
             string cacheKey = $"weather_{Math.Round(lat, 2)}_{Math.Round(lon, 2)}";
 
+           
             if (_cache.TryGetValue(cacheKey, out WeatherResponseDto cachedWeather))
             {
                 return cachedWeather;

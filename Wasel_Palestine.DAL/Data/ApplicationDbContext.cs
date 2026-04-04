@@ -9,6 +9,7 @@ namespace Wasel_Palestine.DAL.Data
     public class ApplicationDbContext : IdentityDbContext<User, Role, string>
     {
         public DbSet<User> Users { get; set; }
+        public DbSet<CityIncidentStats> CityIncidentStats { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
@@ -34,6 +35,7 @@ namespace Wasel_Palestine.DAL.Data
         public DbSet<AlertSubscription> AlertSubscriptions { get; set; }
         public DbSet<AlertHistory> AlertHistories { get; set; }
         public DbSet<ExternalApiCache> ExternalApiCaches { get; set; }
+        public DbSet<CheckpointStatus> CheckpointStatuses { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -44,8 +46,7 @@ namespace Wasel_Palestine.DAL.Data
         {
             base.OnModelCreating(builder);
 
-          
-          //  builder.Ignore<Microsoft.AspNetCore.Identity.IdentityPasskeyData>();
+            // Identity tables
             builder.Entity<User>().ToTable("AspNetUsers");
             builder.Entity<Role>().ToTable("AspNetRoles");
             builder.Entity<IdentityUserRole<string>>().ToTable("AspNetUserRoles");
@@ -54,15 +55,50 @@ namespace Wasel_Palestine.DAL.Data
             builder.Entity<IdentityUserLogin<string>>().ToTable("AspNetUserLogins");
             builder.Entity<IdentityUserToken<string>>().ToTable("AspNetUserTokens");
 
-
+            // Location
             builder.Entity<Location>(entity =>
             {
-                entity.Property(e => e.Latitude).HasPrecision(9, 6);
-                entity.Property(e => e.Longitude).HasPrecision(9, 6);
+                entity.Property(e => e.Latitude).HasPrecision(9, 6).IsRequired();
+                entity.Property(e => e.Longitude).HasPrecision(9, 6).IsRequired();
+                entity.Property(e => e.AreaName).HasMaxLength(100);
+                entity.Property(e => e.City).HasMaxLength(50);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             });
 
+            // AuditLogs
+            builder.Entity<AuditLog>(entity =>
+            {
+                entity.HasKey(a => a.Id);
+                entity.Property(a => a.UserId).IsRequired(false);
+                entity.Property(a => a.Action).HasMaxLength(50).IsRequired();
+                entity.Property(a => a.EntityName).HasMaxLength(100).IsRequired();
+                entity.Property(a => a.Details).HasMaxLength(500);
+                entity.Property(a => a.IPAddress).HasMaxLength(45);
+                entity.Property(a => a.UserAgent).HasMaxLength(256);
+                entity.Property(a => a.Timestamp).HasDefaultValueSql("GETUTCDATE()").IsRequired();
+            });
+
+            // IncidentHistory
+            builder.Entity<IncidentHistory>(entity =>
+            {
+                entity.HasKey(ih => ih.Id);
+                entity.Property(ih => ih.Action).HasMaxLength(50).IsRequired();
+                entity.Property(ih => ih.Changes).HasMaxLength(500);
+
+                entity.HasOne(ih => ih.Incident)
+                      .WithMany(i => i.IncidentHistories)
+                      .HasForeignKey(ih => ih.IncidentId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(ih => ih.Status)
+                      .WithMany(s => s.IncidentHistories)
+                      .HasForeignKey(ih => ih.StatusId)
+                      .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            // UserRole composite key
             builder.Entity<UserRole>()
-         .HasKey(ur => new { ur.UserId, ur.RoleId });
+                .HasKey(ur => new { ur.UserId, ur.RoleId });
 
             builder.Entity<UserRole>()
                 .HasOne(ur => ur.User)
@@ -76,7 +112,33 @@ namespace Wasel_Palestine.DAL.Data
                 .HasForeignKey(ur => ur.RoleId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-     
+            // Incident relationships
+            builder.Entity<Incident>()
+                .HasOne(i => i.CreatedByUser)
+                .WithMany(u => u.CreatedIncidents)
+                .HasForeignKey(i => i.CreatedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<Incident>()
+                .HasOne(i => i.VerifiedByUser)
+                .WithMany(u => u.VerifiedIncidents)
+                .HasForeignKey(i => i.VerifiedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<Incident>()
+                .HasOne(i => i.ClosedByUser)
+                .WithMany(u => u.ClosedIncidents)
+                .HasForeignKey(i => i.ClosedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Incident Media
+            builder.Entity<IncidentMedia>()
+                .HasOne(im => im.Incident)
+                .WithMany(i => i.IncidentMedia)
+                .HasForeignKey(im => im.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Reports
             builder.Entity<ReportMedia>()
                 .HasOne(rm => rm.User)
                 .WithMany(u => u.ReportMedias)
@@ -93,7 +155,7 @@ namespace Wasel_Palestine.DAL.Data
                 .HasOne(rv => rv.User)
                 .WithMany(u => u.ReportVotes)
                 .HasForeignKey(rv => rv.UserId)
-                .OnDelete(DeleteBehavior.NoAction); 
+                .OnDelete(DeleteBehavior.NoAction);
 
             builder.Entity<ReportVote>()
                 .HasOne(rv => rv.Report)
@@ -113,31 +175,26 @@ namespace Wasel_Palestine.DAL.Data
                 .HasForeignKey(rm => rm.ReportId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<Incident>()
-                .HasOne(i => i.CreatedByUser)
-                .WithMany(u => u.CreatedIncidents)
-                .HasForeignKey(i => i.CreatedByUserId)
+            // Checkpoints
+            builder.Entity<Checkpoint>()
+                .HasOne(c => c.Location)
+                .WithMany(l => l.Checkpoints)
+                .HasForeignKey(c => c.LocationId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            builder.Entity<Incident>()
-                .HasOne(i => i.VerifiedByUser)
-                .WithMany(u => u.VerifiedIncidents)
-                .HasForeignKey(i => i.VerifiedByUserId)
-                .OnDelete(DeleteBehavior.NoAction);
+            builder.Entity<Checkpoint>()
+                .HasMany(c => c.StatusHistories)
+                .WithOne(csh => csh.Checkpoint)
+                .HasForeignKey(csh => csh.CheckpointId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<Incident>()
-                .HasOne(i => i.ClosedByUser)
-                .WithMany(u => u.ClosedIncidents)
-                .HasForeignKey(i => i.ClosedByUserId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-        
             builder.Entity<CheckpointStatusHistory>()
                 .HasOne(csh => csh.ChangedByUser)
                 .WithMany(u => u.CheckpointStatusHistories)
                 .HasForeignKey(csh => csh.ChangedByUserId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // Alerts
             builder.Entity<AlertRecipient>()
                 .HasOne(ar => ar.User)
                 .WithMany(u => u.AlertRecipients)
@@ -174,7 +231,7 @@ namespace Wasel_Palestine.DAL.Data
                 .HasForeignKey(asub => asub.CategoryId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-     
+            // RouteRequests
             builder.Entity<RouteRequest>()
                 .HasOne(rr => rr.User)
                 .WithMany(u => u.RouteRequests)
@@ -193,45 +250,37 @@ namespace Wasel_Palestine.DAL.Data
                 .HasForeignKey(rr => rr.ToLocationId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // RefreshTokens
             builder.Entity<RefreshToken>()
                 .HasOne(rt => rt.User)
                 .WithMany(u => u.RefreshTokens)
                 .HasForeignKey(rt => rt.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-        
-            builder.Entity<Checkpoint>()
-                .HasOne(c => c.Location)
-                .WithMany(l => l.Checkpoints)
-                .HasForeignKey(c => c.LocationId)
+            // Incident Categories, Severities, Statuses
+            builder.Entity<Incident>()
+                .HasOne(i => i.Category)
+                .WithMany()
+                .HasForeignKey(i => i.CategoryId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            builder.Entity<Checkpoint>()
-                .HasMany(c => c.StatusHistories)
-                .WithOne(csh => csh.Checkpoint)
-                .HasForeignKey(csh => csh.CheckpointId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-          
-            builder.Entity<IncidentMedia>()
-                .HasOne(im => im.Incident)
-                .WithMany(i => i.IncidentMedia)
-                .HasForeignKey(im => im.IncidentId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-        
-            builder.Entity<IncidentHistory>()
-                .HasOne(ih => ih.Incident)
-                .WithMany(i => i.IncidentHistories)
-                .HasForeignKey(ih => ih.IncidentId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.Entity<IncidentHistory>()
-                .HasOne(ih => ih.Status)
-                .WithMany(s => s.IncidentHistories)
-                .HasForeignKey(ih => ih.StatusId)
+            builder.Entity<Incident>()
+                .HasOne(i => i.Severity)
+                .WithMany()
+                .HasForeignKey(i => i.SeverityId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            builder.Entity<Incident>()
+                .HasOne(i => i.Status)
+                .WithMany()
+                .HasForeignKey(i => i.StatusId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<Incident>()
+    .HasOne(i => i.RelatedCheckpoint) 
+    .WithMany(c => c.RelatedIncidents) 
+    .HasForeignKey(i => i.RelatedCheckpointId)
+    .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }
