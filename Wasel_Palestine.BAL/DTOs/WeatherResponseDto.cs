@@ -7,7 +7,7 @@ namespace Wasel_Palestine.PL.DTOs
         public double Longitude { get; set; }
         public string? Temperature { get; set; }
         public string? Condition { get; set; }
-        
+        public DateTime LastUpdated { get; set; }        
 
     }
 
