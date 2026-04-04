@@ -1,5 +1,6 @@
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Wasel_Palestine.BAL.Service;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -21,15 +22,15 @@ namespace Wasel_Palestine.PL
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddMemoryCache();
-            // ----------------- DbContext -----------------
-            // في ملف Program.cs ابحث عن الجزء الخاص بالـ DbContext وعدله هكذا:
+
+            // DbContext
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(
                     builder.Configuration.GetConnectionString("DefaultConnection"),
-                    x => x.UseNetTopologySuite() // <--- هذا السطر هو الذي يحل مشكلة الـ Point.UserData
+                    x => x.UseNetTopologySuite()
                 ));
 
-            // ----------------- Identity -----------------
+            // Identity
             builder.Services.AddIdentity<User, Role>(options =>
             {
                 options.Lockout.AllowedForNewUsers = true;
@@ -39,7 +40,7 @@ namespace Wasel_Palestine.PL
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-            // ----------------- JWT -----------------
+            // JWT
             var jwt = builder.Configuration.GetSection("Jwt");
             builder.Services.AddAuthentication(options =>
             {
@@ -64,43 +65,39 @@ namespace Wasel_Palestine.PL
                 };
             });
 
+            // Rate Limiting
             builder.Services.AddRateLimiter(options =>
             {
-               
                 options.OnRejected = async (context, token) =>
                 {
                     context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                     await context.HttpContext.Response.WriteAsJsonAsync(new
                     {
                         success = false,
-                        message = "You have exceeded the allowed order limit. Please try again later."
+                        message = "Too many requests"
                     }, cancellationToken: token);
                 };
 
-               
                 options.AddPolicy("fixed-by-ip", httpContext =>
                     RateLimitPartition.GetFixedWindowLimiter(
-                        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
-                        factory: _ => new FixedWindowRateLimiterOptions
+                        httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+                        _ => new FixedWindowRateLimiterOptions
                         {
-                            PermitLimit = 100, // 100 طلب
-                            Window = TimeSpan.FromMinutes(1), // كل دقيقة
-                            QueueLimit = 0
+                            PermitLimit = 100,
+                            Window = TimeSpan.FromMinutes(1)
                         }));
 
-               
                 options.AddPolicy("strict-by-ip", httpContext =>
                     RateLimitPartition.GetFixedWindowLimiter(
-                        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
-                        factory: _ => new FixedWindowRateLimiterOptions
+                        httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+                        _ => new FixedWindowRateLimiterOptions
                         {
-                            PermitLimit = 5, // 5 طلبات فقط
-                            Window = TimeSpan.FromMinutes(1),
-                            QueueLimit = 0
+                            PermitLimit = 5,
+                            Window = TimeSpan.FromMinutes(1)
                         }));
             });
 
-
+            // Authorization (من شغلك)
             builder.Services.AddAuthorization(options =>
             {
                 options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
@@ -109,13 +106,18 @@ namespace Wasel_Palestine.PL
                 options.AddPolicy("ActiveUserOnly", p => p.RequireClaim("isActive", "true"));
             });
 
+            // Controllers + Services (دمج الاثنين)
             builder.Services.AddControllers(options =>
             {
                 options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter("ActiveUserOnly"));
             });
 
-          
             builder.Services.AddHttpContextAccessor();
+
+           
+           
+            builder.Services.AddScoped<MobilityService>();
+            builder.Services.AddScoped<ReportingService>();
 
             // Services
             builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
@@ -132,6 +134,7 @@ namespace Wasel_Palestine.PL
             builder.Services.AddHttpClient<IWeatherService, WeatherService>();
             builder.Services.AddHostedService<WeatherBackgroundService>();
             builder.Services.AddScoped<IAlertService, AlertService>();
+
             // Repositories
             builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
             builder.Services.AddScoped<IIncidentCategoryRepository, IncidentCategoryRepository>();
@@ -155,56 +158,23 @@ namespace Wasel_Palestine.PL
             builder.Services.AddScoped<AuditLogger>();
             builder.Services.AddMapster();
             builder.Services.AddOpenApi();
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
 
-            // ----------------- Build & Run -----------------
             MapsterConfig.RegisterMappings();
+
             var app = builder.Build();
 
-            using (var scope = app.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
-                var context = services.GetRequiredService<ApplicationDbContext>();
-
-                var checkpointsToUpdate = await context.Checkpoints
-                    .Include(c => c.Location)
-                    .Where(c => c.Location != null && (c.Location.Coordinates == null))
-                    .ToListAsync();
-
-                if (checkpointsToUpdate.Any())
-                {
-                    var factory = NetTopologySuite.NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
-                    foreach (var cp in checkpointsToUpdate)
-                    {
-                       
-                        cp.Location.Coordinates = factory.CreatePoint(new NetTopologySuite.Geometries.Coordinate((double)cp.Location.Longitude, (double)cp.Location.Latitude));
-                    }
-                    await context.SaveChangesAsync();
-                    Console.WriteLine($"✅ Done! Updated {checkpointsToUpdate.Count} checkpoints with GPS Coordinates.");
-                }
-            }
             app.UseRateLimiter();
             app.UseStaticFiles();
             app.UseAuthentication();
             app.UseAuthorization();
 
-            // Seed Data
-            using (var scope = app.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
-
-                var roleSeeder = services.GetRequiredService<RoleSeedData>();
-                await roleSeeder.DataSeed();
-
-                var userSeeder = services.GetRequiredService<UserSeedData>();
-                await userSeeder.DataSeed();
-
-                var statusSeeder = services.GetRequiredService<ReportStatusSeedData>();
-                await statusSeeder.DataSeed();
-            }
-
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
+                app.UseSwagger();
+                app.UseSwaggerUI();
             }
 
             app.MapControllers();

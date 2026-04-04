@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.Caching.Memory;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Microsoft.Extensions.Caching.Memory;
 using System.Text.Json;
 using Wasel_Palestine.DAL.DTO.Response;
 
@@ -20,7 +17,6 @@ namespace Wasel_Palestine.BLL.Service
 
         public async Task<WeatherResponseDto> GetCurrentWeatherAsync(double lat, double lon)
         {
-            
             string cacheKey = $"weather_{Math.Round(lat, 2)}_{Math.Round(lon, 2)}";
 
            
@@ -38,7 +34,9 @@ namespace Wasel_Palestine.BLL.Service
 
                 using var jsonDoc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
                 var root = jsonDoc.RootElement;
-                var current = root.GetProperty("current_weather");
+
+                if (!root.TryGetProperty("current_weather", out var current))
+                    throw new Exception("Weather data not available.");
 
                 var weatherData = new WeatherResponseDto
                 {
@@ -49,19 +47,17 @@ namespace Wasel_Palestine.BLL.Service
                     LastUpdated = DateTime.UtcNow
                 };
 
-             
+                
                 _cache.Set(cacheKey, weatherData, TimeSpan.FromMinutes(30));
 
                 return weatherData;
             }
             catch (Exception ex)
             {
-                
-                throw new Exception($"Error fetching weather data: {ex.Message}");
+                throw new Exception($"Weather service error: {ex.Message}");
             }
         }
 
-        
         private string MapWeatherCode(int code) => code switch
         {
             0 => "Clear Sky",

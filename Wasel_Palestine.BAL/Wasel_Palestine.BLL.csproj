@@ -21,5 +21,5 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer.NetTopologySuite" Version="10.0.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.4" />
   </ItemGroup>
-
+  
 </Project>
