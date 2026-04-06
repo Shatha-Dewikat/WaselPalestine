@@ -20,7 +20,7 @@ namespace Wasel_Palestine.DAL.Model
         public int LocationId { get; set; }
         public Location Location { get; set; }
 
-        public string Description { get; set; }
+        public string? Description { get; set; }
         public float ConfidenceScore { get; set; }
         public int? DuplicateOfReportId { get; set; }
         public Report DuplicateOfReport { get; set; }

@@ -71,16 +71,16 @@ namespace Wasel_Palestine.PL.Area.Controllers
         }
 
       
-        [HttpPost("submit-report")]
-        public async Task<IActionResult> PostReport([FromBody] CreateReportDto reportDto)
-        {
-            var result = await _reportingService.SubmitReportAsync(reportDto);
+        //[HttpPost("submit-report")]
+        //public async Task<IActionResult> PostReport([FromBody] CreateReportDto reportDto)
+        //{
+        //    var result = await _reportingService.SubmitReportAsync(reportDto);
 
-            if (result.StartsWith("Success"))
-                return Ok(new { message = result });
+        //    if (result.StartsWith("Success"))
+        //        return Ok(new { message = result });
 
-            return Conflict(new { message = result });
-        }
+        //    return Conflict(new { message = result });
+        //}
 
        
         [HttpPost("dismiss-report/{id}")]

@@ -5,31 +5,31 @@
 namespace Wasel_Palestine.DAL.Migrations
 {
     /// <inheritdoc />
-    public partial class @null : Migration
+    public partial class newRep : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<string>(
-                name: "CreatedByUserId",
-                table: "Incidents",
-                type: "nvarchar(450)",
+                name: "Description",
+                table: "Reports",
+                type: "nvarchar(max)",
                 nullable: true,
                 oldClrType: typeof(string),
-                oldType: "nvarchar(450)");
+                oldType: "nvarchar(max)");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<string>(
-                name: "CreatedByUserId",
-                table: "Incidents",
-                type: "nvarchar(450)",
+                name: "Description",
+                table: "Reports",
+                type: "nvarchar(max)",
                 nullable: false,
                 defaultValue: "",
                 oldClrType: typeof(string),
-                oldType: "nvarchar(450)",
+                oldType: "nvarchar(max)",
                 oldNullable: true);
         }
     }

@@ -77,5 +77,7 @@ namespace Wasel_Palestine.PL.Area.Alerts
             var history = await _alertService.GetAlertHistoryAsync(id);
             return Ok(new { success = true, data = history });
         }
+
+
     }
 }

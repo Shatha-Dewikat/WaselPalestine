@@ -13,5 +13,7 @@ namespace Wasel_Palestine.DAL.Model
 
         public List<AlertRecipient> Recipients { get; set; } = new List<AlertRecipient>();
         public List<AlertHistory> AlertHistories { get; set; } = new List<AlertHistory>();
+        public string ?Title { get; set; }
+        public string? Message { get; set; }
     }
 }

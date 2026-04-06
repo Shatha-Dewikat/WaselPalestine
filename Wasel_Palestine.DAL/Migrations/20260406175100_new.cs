@@ -5,19 +5,21 @@
 namespace Wasel_Palestine.DAL.Migrations
 {
     /// <inheritdoc />
-    public partial class newChe : Migration
+    public partial class @new : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.RenameColumn(
-                name: "Status",
-                table: "CheckpointStatusHistories",
-                newName: "OldStatus");
+            migrationBuilder.AddColumn<string>(
+                name: "Message",
+                table: "Alerts",
+                type: "nvarchar(max)",
+                nullable: false,
+                defaultValue: "");
 
             migrationBuilder.AddColumn<string>(
-                name: "NewStatus",
-                table: "CheckpointStatusHistories",
+                name: "Title",
+                table: "Alerts",
                 type: "nvarchar(max)",
                 nullable: false,
                 defaultValue: "");
@@ -27,13 +29,12 @@ namespace Wasel_Palestine.DAL.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "NewStatus",
-                table: "CheckpointStatusHistories");
+                name: "Message",
+                table: "Alerts");
 
-            migrationBuilder.RenameColumn(
-                name: "OldStatus",
-                table: "CheckpointStatusHistories",
-                newName: "Status");
+            migrationBuilder.DropColumn(
+                name: "Title",
+                table: "Alerts");
         }
     }
 }
