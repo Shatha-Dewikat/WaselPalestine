@@ -4,7 +4,7 @@ using System.Net.Mail;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Identity.UI.Services;
 
-namespace Wasel_Palestine.BLL.Service
+namespace Wasel_Palestine.BAL.Service
 {
     public class EmailSender : IEmailSender
     {

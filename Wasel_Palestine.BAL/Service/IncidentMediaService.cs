@@ -1,6 +1,6 @@
 ﻿using Mapster;
 using Microsoft.Extensions.Caching.Memory;
-using Wasel_Palestine.BLL.Service;
+using Wasel_Palestine.BAL.Service;
 using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
 using Wasel_Palestine.DAL.Model;

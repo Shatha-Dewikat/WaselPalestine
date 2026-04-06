@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Wasel_Palestine.BLL.Helper
+namespace Wasel_Palestine.BAL.Helper
 {
     public static class PalestineGridHelper
     {

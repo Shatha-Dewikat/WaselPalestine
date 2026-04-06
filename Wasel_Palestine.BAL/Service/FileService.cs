@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Wasel_Palestine.BLL.Service
+namespace Wasel_Palestine.BAL.Service
 {
     public class FileService : IFileService
     {

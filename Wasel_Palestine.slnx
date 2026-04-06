@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="Wasel_Palestine.BAL/Wasel_Palestine.BLL.csproj" />
+  <Project Path="Wasel_Palestine.BAL/Wasel_Palestine.BAL.csproj" />
   <Project Path="Wasel_Palestine.DAL/Wasel_Palestine.DAL.csproj" />
   <Project Path="Wasel_Palestine.PL/Wasel_Palestine.PL.csproj" />
 </Solution>

@@ -5,14 +5,16 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Wasel_Palestine.BLL.MapsterConfigration;
-using Wasel_Palestine.BLL.Service;
+using Wasel_Palestine.BAL.MapsterConfigration;
+using Wasel_Palestine.BAL.Service;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Repository;
 using Wasel_Palestine.DAL.Utils;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Swashbuckle.AspNetCore.SwaggerGen;
+
 
 namespace Wasel_Palestine.PL
 {

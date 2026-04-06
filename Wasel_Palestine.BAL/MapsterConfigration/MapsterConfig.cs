@@ -5,7 +5,7 @@ using System.Text;
 using Wasel_Palestine.DAL.DTO.Response;
 using Wasel_Palestine.DAL.Model;
 
-namespace Wasel_Palestine.BLL.MapsterConfigration
+namespace Wasel_Palestine.BAL.MapsterConfigration
 {
     public class MapsterConfig
     {

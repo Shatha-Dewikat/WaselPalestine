@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wasel_Palestine.BAL.Service;
 using Wasel_Palestine.BAL.DTOs;
-using Wasel_Palestine.BLL.Service;
+using Wasel_Palestine.BAL.Service;
 
 namespace Wasel_Palestine.PL.Area.Controllers
 {

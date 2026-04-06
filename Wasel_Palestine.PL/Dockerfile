@@ -13,7 +13,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Wasel_Palestine.PL/Wasel_Palestine.PL.csproj", "Wasel_Palestine.PL/"]
-COPY ["Wasel_Palestine.BAL/Wasel_Palestine.BLL.csproj", "Wasel_Palestine.BAL/"]
+COPY ["Wasel_Palestine.BAL/Wasel_Palestine.BAL.csproj", "Wasel_Palestine.BAL/"]
 COPY ["Wasel_Palestine.DAL/Wasel_Palestine.DAL.csproj", "Wasel_Palestine.DAL/"]
 RUN dotnet restore "./Wasel_Palestine.PL/Wasel_Palestine.PL.csproj"
 COPY . .

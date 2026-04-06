@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Wasel_Palestine.BLL.Helper;
+using Wasel_Palestine.BAL.Helper;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
@@ -14,7 +14,7 @@ using Wasel_Palestine.DAL.Migrations;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Repository;
 
-namespace Wasel_Palestine.BLL.Service
+namespace Wasel_Palestine.BAL.Service
 {
     public class IncidentService : IIncidentService
     {

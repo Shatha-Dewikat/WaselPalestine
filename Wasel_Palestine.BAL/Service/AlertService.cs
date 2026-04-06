@@ -8,7 +8,7 @@ using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
 using Wasel_Palestine.DAL.Model;
 
-namespace Wasel_Palestine.BLL.Service
+namespace Wasel_Palestine.BAL.Service
 {
     public class AlertService : IAlertService
     {

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using Wasel_Palestine.BLL.Service;
+using Wasel_Palestine.BAL.Service;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.Model;

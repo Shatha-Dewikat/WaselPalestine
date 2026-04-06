@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.Tasks;
-using Wasel_Palestine.BLL.Service;
+using Wasel_Palestine.BAL.Service;
 using Wasel_Palestine.DAL.DTO.Request;
 
 namespace Wasel_Palestine.PL.Area.Checkpoints

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using Wasel_Palestine.BLL.Service;
+using Wasel_Palestine.BAL.Service;
 
 public class WeatherBackgroundService : BackgroundService
 {

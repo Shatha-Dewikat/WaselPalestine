@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Wasel_Palestine.BLL.Service;
+using Wasel_Palestine.BAL.Service;
 using Wasel_Palestine.DAL.DTO.Request;
 
 [Route("api/[controller]")]

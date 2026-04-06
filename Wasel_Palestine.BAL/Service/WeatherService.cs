@@ -23,7 +23,6 @@ namespace Wasel_Palestine.BAL.Service
         {
             string cacheKey = $"weather_{Math.Round(lat, 2)}_{Math.Round(lon, 2)}";
 
-           
             if (_cache.TryGetValue(cacheKey, out WeatherResponseDto cachedWeather))
             {
                 return cachedWeather;
@@ -64,6 +63,7 @@ namespace Wasel_Palestine.BAL.Service
             }
         }
 
+        
         private string MapWeatherCode(int code) => code switch
         {
             0 => "Clear Sky",
