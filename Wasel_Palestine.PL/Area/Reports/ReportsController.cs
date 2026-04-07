@@ -34,6 +34,23 @@ namespace Wasel_Palestine.PL.Area.Reports
             );
         }
 
+        [HttpDelete("delete-report/{id}")]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<IActionResult> DeleteReport(int id, [FromQuery] string reason)
+        {
+            var adminId = User.FindFirst("UserId")?.Value;
+
+            if (string.IsNullOrEmpty(reason))
+                return BadRequest(new { success = false, message = "Please provide a reason for deletion" });
+
+            var result = await _reportingService.DeleteReportAsync(id, adminId, reason);
+
+            if (result == "Report not found")
+                return NotFound(new { success = false, message = result });
+
+            return Ok(new { success = true, message = result });
+        }
+
         [HttpGet("dashboard-stats")]
         public async Task<IActionResult> GetDashboardStats()
         {
@@ -57,6 +74,49 @@ namespace Wasel_Palestine.PL.Area.Reports
             bool isStaff = User.IsInRole("Moderator") || User.IsInRole("Admin");
 
             var result = await _reportingService.SubmitReportAsync(reportDto, isStaff);
+
+            return Ok(new { success = true, message = result });
+        }
+
+        [HttpPost("{id}/vote")]
+        [Authorize]
+        public async Task<IActionResult> Vote(int id, [FromQuery] bool isUpvote)
+        {
+            var userId = User.FindFirst("UserId")?.Value;
+            var result = await _reportingService.VoteOnReportAsync(id, userId, isUpvote);
+            return Ok(new { success = true, message = result });
+        }
+
+
+        [HttpPut("update-status/{id}")]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromQuery] int statusId, [FromQuery] string notes)
+        {
+            var moderatorId = User.FindFirst("UserId")?.Value;
+
+            if (string.IsNullOrEmpty(notes))
+                return BadRequest(new { success = false, message = "Please provide notes/reason for status change" });
+
+            var result = await _reportingService.UpdateReportStatusAsync(id, statusId, moderatorId, notes);
+
+            if (result.Contains("not found") || result.Contains("Invalid"))
+                return NotFound(new { success = false, message = result });
+
+            return Ok(new { success = true, message = result });
+        }
+
+        [HttpPost("{id}/upload-media")]
+        [Authorize]
+        public async Task<IActionResult> UploadMedia(int id, IFormFile file)
+        {
+            var userId = User.FindFirst("UserId")?.Value;
+
+            if (file == null || file.Length == 0)
+                return BadRequest("No file uploaded.");
+
+            var result = await _reportingService.UploadReportMediaAsync(id, userId, file);
+
+            if (result == "Report not found") return NotFound(result);
 
             return Ok(new { success = true, message = result });
         }

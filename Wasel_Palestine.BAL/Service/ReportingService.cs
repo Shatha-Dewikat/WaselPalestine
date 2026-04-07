@@ -1,115 +1,208 @@
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Wasel_Palestine.DAL.Data;
-using Wasel_Palestine.DAL.Model;
+using NetTopologySuite.Geometries;
 using Wasel_Palestine.BAL.DTOs;
+using Wasel_Palestine.DAL.Data;
+using Wasel_Palestine.DAL.DTO.Response;
+using Wasel_Palestine.DAL.Model;
 
 namespace Wasel_Palestine.BAL.Service
 {
     public class ReportingService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment _environment;
 
-        public ReportingService(ApplicationDbContext context)
+        public ReportingService(ApplicationDbContext context, IWebHostEnvironment environment)
         {
             _context = context;
+            _environment = environment;
         }
 
+        public async Task<string> UploadReportMediaAsync(int reportId, string userId, IFormFile file)
+        {
+            var report = await _context.Reports.FindAsync(reportId);
+            if (report == null) return "Report not found";
+
+            string uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads/reports");
+            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+            string uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
+            string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(fileStream);
+            }
+
+            var media = new ReportMedia
+            {
+                ReportId = reportId,
+                UserId = userId,
+                MediaUrl = "/uploads/reports/" + uniqueFileName,
+                MediaType = file.ContentType.StartsWith("image") ? "Image" : "Video",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            report.ConfidenceScore = Math.Min(1.0f, report.ConfidenceScore + 0.3f);
+
+            _context.ReportMedias.Add(media);
+            await _context.SaveChangesAsync();
+
+            return "Media uploaded and confidence score increased!";
+        }
         public async Task<string> SubmitReportAsync(CreateReportDto reportDto, bool isStaff)
         {
             var thresholdTime = DateTime.UtcNow.AddHours(-2);
-
-            float initialScore = isStaff ? 1.0f : 0.4f;
+            float staffScore = 1.0f;
+            float userInitialScore = 0.4f;
+            float confirmationIncrement = 0.2f;
 
             var potentialDuplicates = await _context.Reports
                 .Include(r => r.Location)
-                .Where(r => r.CategoryId == reportDto.CategoryId && r.CreatedAt >= thresholdTime)
+                .Where(r => r.DeletedAt == null && 
+                            r.CategoryId == reportDto.CategoryId &&
+                            r.CreatedAt >= thresholdTime)
                 .ToListAsync();
 
             var existingDuplicate = potentialDuplicates
                 .FirstOrDefault(r => CalculateDistance((double)reportDto.Latitude, (double)reportDto.Longitude,
                                                        (double)r.Location.Latitude, (double)r.Location.Longitude) <= 0.5);
 
-            var newLocation = new Location
+            if (existingDuplicate != null)
             {
-                Latitude = reportDto.Latitude,
-                Longitude = reportDto.Longitude,
-                AreaName = "Manual Report",
-                City = "Unknown",
-                CreatedAt = DateTime.UtcNow
-            };
+                if (existingDuplicate.UserId == reportDto.UserId)
+                    return "You have already reported this incident.";
+
+                existingDuplicate.ConfidenceScore = isStaff ? staffScore : Math.Min(1.0f, existingDuplicate.ConfidenceScore + confirmationIncrement);
+                existingDuplicate.CreatedAt = DateTime.UtcNow;
+
+                if (existingDuplicate.ConfidenceScore >= 1.0f)
+                {
+                    var alreadyHasIncident = await _context.Incidents.AnyAsync(i => i.LocationId == existingDuplicate.LocationId && i.CreatedAt >= thresholdTime);
+                    if (!alreadyHasIncident) await CreateIncidentFromReportAsync(existingDuplicate);
+                }
+
+                await _context.SaveChangesAsync();
+                return "Thank you! Your confirmation has been added.";
+            }
+
+            var existingLocation = await _context.Locations
+                .FirstOrDefaultAsync(l => Math.Abs(l.Latitude - reportDto.Latitude) < 0.0001m &&
+                                         Math.Abs(l.Longitude - reportDto.Longitude) < 0.0001m);
+
+            DAL.Model.Location locationToUse;
+
+            if (existingLocation != null)
+            {
+                locationToUse = existingLocation;
+            }
+            else
+            {
+                locationToUse = new DAL.Model.Location
+                {
+                    Latitude = reportDto.Latitude,
+                    Longitude = reportDto.Longitude,
+                    City = reportDto.City , 
+                    AreaName = reportDto.AreaName ,
+                    CreatedAt = DateTime.UtcNow,
+                    Coordinates = new Point((double)reportDto.Longitude, (double)reportDto.Latitude) { SRID = 4326 }
+                };
+            }
 
             var newReport = new Report
             {
-                Location = newLocation,
-                Description = reportDto.Description ?? "No description",
+                Location = locationToUse,
+                Description = reportDto.Description ?? "بلاغ عن " + locationToUse.City,
                 CategoryId = reportDto.CategoryId,
                 UserId = reportDto.UserId,
                 CreatedAt = DateTime.UtcNow,
                 StatusId = isStaff ? 2 : 1,
-                ConfidenceScore = initialScore
+                ConfidenceScore = isStaff ? staffScore : userInitialScore,
+                DeletedAt = null
             };
-
-            if (existingDuplicate != null)
-            {
-                newReport.DuplicateOfReportId = existingDuplicate.Id;
-
-                if (isStaff)
-                {
-                    existingDuplicate.ConfidenceScore = 1.0f;
-                    existingDuplicate.StatusId = 2;
-                }
-                else if (existingDuplicate.UserId != reportDto.UserId)
-                {
-                    existingDuplicate.ConfidenceScore += 0.3f;
-                }
-
-                if (existingDuplicate.ConfidenceScore >= 1.0f)
-                {
-                    bool alreadyHasIncident = await _context.Incidents
-                        .AnyAsync(i => i.LocationId == existingDuplicate.LocationId
-                                  && i.CategoryId == existingDuplicate.CategoryId
-                                  && i.CreatedAt >= thresholdTime);
-
-                    if (!alreadyHasIncident)
-                    {
-                        await CreateIncidentFromReportAsync(existingDuplicate);
-                    }
-                }
-            }
-            else if (isStaff)
-            {
-                _context.Reports.Add(newReport);
-                await _context.SaveChangesAsync();
-                await CreateIncidentFromReportAsync(newReport);
-                return "Report confirmed and published immediately by staff.";
-            }
 
             _context.Reports.Add(newReport);
             await _context.SaveChangesAsync();
 
-         
-            if (isStaff) return "Report confirmed and published immediately by staff.";
+            if (isStaff) await CreateIncidentFromReportAsync(newReport);
 
-            if (existingDuplicate != null)
-            {
-                if (existingDuplicate.UserId == reportDto.UserId)
-                    return "You have already reported this incident. Thank you.";
-
-                if (existingDuplicate.ConfidenceScore >= 1.0f)
-                    return "Thank you! The incident has been confirmed and published.";
-
-                return "Thank you! Your confirmation has been added to the report.";
-            }
-
-            return "Thank you! Your report has been received and is under review.";
+            return "Thank you! Your report has been received.";
         }
 
+        public async Task<string> VoteOnReportAsync(int reportId, string userId, bool isUpvote)
+        {
+            var report = await _context.Reports.FindAsync(reportId);
+            if (report == null || report.DeletedAt != null) return "Report not found";
+
+            var existingVote = await _context.ReportVotes
+                .FirstOrDefaultAsync(v => v.ReportId == reportId && v.UserId == userId);
+
+            if (existingVote != null) return "You have already voted on this report.";
+
+            var vote = new ReportVote
+            {
+                ReportId = reportId,
+                UserId = userId,
+                VoteType = isUpvote ? "Upvote" : "Downvote",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            float change = isUpvote ? 0.1f : -0.1f;
+            report.ConfidenceScore = Math.Clamp(report.ConfidenceScore + change, 0, 1.0f);
+
+            _context.ReportVotes.Add(vote);
+            await _context.SaveChangesAsync();
+
+            return isUpvote ? "Report confirmed!" : "Report disputed.";
+        }
+
+        public async Task<string> DeleteReportAsync(int reportId, string adminId, string reason)
+        {
+            var report = await _context.Reports.FindAsync(reportId);
+            if (report == null) return "Report not found";
+
+            report.DeletedAt = DateTime.UtcNow;
+
+            var action = new ReportModerationAction
+            {
+                ReportId = reportId,
+                ModeratorId = adminId, 
+                Action = "Soft Delete",
+                Notes = reason,     
+                ActionAt = DateTime.UtcNow
+            };
+
+            _context.ReportModerationActions.Add(action);
+            await _context.SaveChangesAsync();
+
+            return "Report deleted and action logged.";
+        }
+
+        public async Task<List<HeatmapPointResponse>> GetIncidentHeatmapAsync(DateTime? fromDate)
+        {
+            var query = _context.Reports.AsQueryable();
+
+            query = query.Where(r => r.DeletedAt == null && r.StatusId != 3);
+
+            if (fromDate.HasValue)
+                query = query.Where(r => r.CreatedAt >= fromDate.Value);
+
+            return await query
+                .GroupBy(r => new { r.Location.Latitude, r.Location.Longitude })
+                .Select(g => new HeatmapPointResponse
+                {
+                    Latitude = (double)g.Key.Latitude,
+                    Longitude = (double)g.Key.Longitude,
+                    Intensity = g.Count()
+                }).ToListAsync();
+        }
         private async Task CreateIncidentFromReportAsync(Report report)
         {
             var confirmedStatus = await _context.IncidentStatuses.FirstOrDefaultAsync(s => s.Name == "Confirmed");
             var mediumSeverity = await _context.IncidentSeverities.FirstOrDefaultAsync(s => s.Name == "Medium");
 
-            // 1. إنشاء الحادث أولاً
             var newIncident = new Incident
             {
                 Title = "Reported Incident",
@@ -129,23 +222,19 @@ namespace Wasel_Palestine.BAL.Service
 
             _context.Incidents.Add(newIncident);
 
-            // ** خطوة حاسمة: حفظ الحادث أولاً ليأخذ Id من قاعدة البيانات **
             await _context.SaveChangesAsync();
 
-            // 2. الآن ننشئ التنبيه ونربطه بالـ Id الجديد
             var alert = new Alert
             {
                 Title = "تنبيه جديد: " + newIncident.TitleAr,
                 Message = newIncident.DescriptionAr,
                 CreatedAt = DateTime.UtcNow,
-                // تأكد أن اسم الحقل في جدول Alerts هو IncidentId
                 IncidentId = newIncident.Id
             };
 
             _context.Alerts.Add(alert);
-            await _context.SaveChangesAsync(); // حفظ التنبيه
+            await _context.SaveChangesAsync(); 
 
-            // 3. جلب المشتركين وإرسال الإشعارات لهم
             var subscribers = await _context.AlertSubscriptions
                 .Where(s => s.CategoryId == report.CategoryId)
                 .ToListAsync();
@@ -162,7 +251,33 @@ namespace Wasel_Palestine.BAL.Service
             await _context.SaveChangesAsync();
         }
 
+        public async Task<string> UpdateReportStatusAsync(int reportId, int newStatusId, string moderatorId, string notes)
+        {
+            var report = await _context.Reports.FindAsync(reportId);
+            if (report == null || report.DeletedAt != null) return "Report not found";
 
+            report.StatusId = newStatusId;
+
+            if (newStatusId == 3)
+            {
+                report.ConfidenceScore = 0; 
+                                          
+            }
+
+            var action = new ReportModerationAction
+            {
+                ReportId = reportId,
+                ModeratorId = moderatorId,
+                Action = $"Status changed to {newStatusId}",
+                Notes = notes,
+                ActionAt = DateTime.UtcNow
+            };
+
+            _context.ReportModerationActions.Add(action);
+            await _context.SaveChangesAsync();
+
+            return "Status updated and impact applied.";
+        }
 
         public async Task<string> DismissReportAsync(int reportId)
         {
@@ -171,7 +286,7 @@ namespace Wasel_Palestine.BAL.Service
 
             report.ConfidenceScore -= 0.2f;
             if (report.ConfidenceScore < 1.0f && report.StatusId == 2) report.StatusId = 1;
-            if (report.ConfidenceScore <= 0.31f) report.StatusId = 4; // Dismissed
+            if (report.ConfidenceScore <= 0.31f) report.StatusId = 4; 
 
             await _context.SaveChangesAsync();
             return "Thank you! Your feedback has been recorded.";
@@ -182,7 +297,7 @@ namespace Wasel_Palestine.BAL.Service
             return await _context.Reports
                 .Include(r => r.Category)
                 .Include(r => r.Location)
-                .Where(r => r.StatusId == 2)
+                .Where(r => r.DeletedAt == null && r.StatusId == 2)
                 .Select(r => new ActiveReportDto
                 {
                     Id = r.Id,
