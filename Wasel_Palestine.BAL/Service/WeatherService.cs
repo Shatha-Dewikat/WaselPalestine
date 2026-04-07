@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Wasel_Palestine.PL.DTOs; 
@@ -21,6 +20,7 @@ namespace Wasel_Palestine.BAL.Service
 
         public async Task<WeatherResponseDto> GetCurrentWeatherAsync(double lat, double lon)
         {
+           
             string cacheKey = $"weather_{Math.Round(lat, 2)}_{Math.Round(lon, 2)}";
 
             if (_cache.TryGetValue(cacheKey, out WeatherResponseDto cachedWeather))
@@ -33,6 +33,8 @@ namespace Wasel_Palestine.BAL.Service
             try
             {
                 var response = await _httpClient.GetAsync(url);
+                
+               
                 response.EnsureSuccessStatusCode();
 
                 using var jsonDoc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
@@ -46,24 +48,35 @@ namespace Wasel_Palestine.BAL.Service
                         Longitude = lon,
                         Temperature = current.GetProperty("temperature").GetRawText() + "°C",
                         Condition = MapWeatherCode(current.GetProperty("weathercode").GetInt32()),
-                        LastUpdated = DateTime.UtcNow
+                        LastUpdated = DateTime.Now 
                     };
 
-                  
+                    
                     _cache.Set(cacheKey, weatherData, TimeSpan.FromMinutes(30));
 
                     return weatherData;
                 }
 
-                throw new Exception("Current weather data not found in response.");
+                return GetFallbackWeather(lat, lon);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                throw new Exception($"Error fetching weather data: {ex.Message}");
+                return GetFallbackWeather(lat, lon);
             }
         }
 
-        
+        private WeatherResponseDto GetFallbackWeather(double lat, double lon)
+        {
+            return new WeatherResponseDto
+            {
+                Latitude = lat,
+                Longitude = lon,
+                Temperature = "N/A",
+                Condition = "Weather Service Temporarily Unavailable",
+                LastUpdated = DateTime.Now
+            };
+        }
+
         private string MapWeatherCode(int code) => code switch
         {
             0 => "Clear Sky",
