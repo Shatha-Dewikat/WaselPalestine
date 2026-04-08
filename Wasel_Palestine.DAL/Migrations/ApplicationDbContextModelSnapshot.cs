@@ -153,7 +153,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("IncidentId");
 
-                    b.ToTable("Alerts");
+                    b.ToTable("Alerts", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.AlertHistory", b =>
@@ -178,7 +178,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("AlertId");
 
-                    b.ToTable("AlertHistories");
+                    b.ToTable("AlertHistories", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.AlertRecipient", b =>
@@ -208,7 +208,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AlertRecipients");
+                    b.ToTable("AlertRecipients", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.AlertSubscription", b =>
@@ -240,7 +240,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AlertSubscriptions");
+                    b.ToTable("AlertSubscriptions", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.AuditLog", b =>
@@ -291,7 +291,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AuditLogs", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.Checkpoint", b =>
@@ -346,7 +346,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("LocationId");
 
-                    b.ToTable("Checkpoints");
+                    b.ToTable("Checkpoints", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.CheckpointStatus", b =>
@@ -370,7 +370,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CheckpointStatuses");
+                    b.ToTable("CheckpointStatuses", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.CheckpointStatusHistory", b =>
@@ -405,7 +405,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("CheckpointId");
 
-                    b.ToTable("CheckpointStatusHistories");
+                    b.ToTable("CheckpointStatusHistories", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.CityIncidentStats", b =>
@@ -428,7 +428,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CityIncidentStats");
+                    b.ToTable("CityIncidentStats", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.ExternalApiCache", b =>
@@ -459,7 +459,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ExternalApiCaches");
+                    b.ToTable("ExternalApiCaches", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.Incident", b =>
@@ -563,7 +563,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("VerifiedByUserId");
 
-                    b.ToTable("Incidents");
+                    b.ToTable("Incidents", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.IncidentCategory", b =>
@@ -587,7 +587,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("IncidentCategories");
+                    b.ToTable("IncidentCategories", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.IncidentHistory", b =>
@@ -629,7 +629,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("StatusId");
 
-                    b.ToTable("IncidentHistories");
+                    b.ToTable("IncidentHistories", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.IncidentMedia", b =>
@@ -665,7 +665,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("IncidentId");
 
-                    b.ToTable("IncidentMedias");
+                    b.ToTable("IncidentMedias", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.IncidentSeverity", b =>
@@ -685,7 +685,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("IncidentSeverities");
+                    b.ToTable("IncidentSeverities", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.IncidentStatus", b =>
@@ -706,7 +706,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("IncidentStatuses");
+                    b.ToTable("IncidentStatuses", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.Location", b =>
@@ -745,7 +745,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Locations");
+                    b.ToTable("Locations", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.RefreshToken", b =>
@@ -792,7 +792,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("RefreshTokens", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.Report", b =>
@@ -843,7 +843,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Reports");
+                    b.ToTable("Reports", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.ReportMedia", b =>
@@ -876,7 +876,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ReportMedias");
+                    b.ToTable("ReportMedias", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.ReportModerationAction", b =>
@@ -911,7 +911,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("ReportId");
 
-                    b.ToTable("ReportModerationActions");
+                    b.ToTable("ReportModerationActions", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.ReportStatus", b =>
@@ -928,7 +928,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ReportStatuses");
+                    b.ToTable("ReportStatuses", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.ReportVote", b =>
@@ -959,7 +959,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ReportVotes");
+                    b.ToTable("ReportVotes", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.Role", b =>
@@ -1041,7 +1041,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RouteRequests");
+                    b.ToTable("RouteRequests", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.User", b =>
@@ -1158,7 +1158,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("UserRoles");
+                    b.ToTable("UserRoles", (string)null);
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.UserSession", b =>
@@ -1197,7 +1197,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UserSessions");
+                    b.ToTable("UserSessions", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

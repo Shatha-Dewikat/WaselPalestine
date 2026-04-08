@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using Wasel_Palestine.BAL.DTOs;
+using Wasel_Palestine.BLL.Service;
 using Wasel_Palestine.DAL.Data;
+using Wasel_Palestine.DAL.DTO.Request;
 using Wasel_Palestine.DAL.DTO.Response;
 using Wasel_Palestine.DAL.Model;
 
@@ -13,45 +15,15 @@ namespace Wasel_Palestine.BAL.Service
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly IAlertService _alertService;
 
-        public ReportingService(ApplicationDbContext context, IWebHostEnvironment environment)
+        public ReportingService(ApplicationDbContext context, IWebHostEnvironment environment, IAlertService alertService)
         {
             _context = context;
             _environment = environment;
+            _alertService = alertService;
         }
 
-        public async Task<string> UploadReportMediaAsync(int reportId, string userId, IFormFile file)
-        {
-            var report = await _context.Reports.FindAsync(reportId);
-            if (report == null) return "Report not found";
-
-            string uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads/reports");
-            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
-
-            string uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
-            string filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-            using (var fileStream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(fileStream);
-            }
-
-            var media = new ReportMedia
-            {
-                ReportId = reportId,
-                UserId = userId,
-                MediaUrl = "/uploads/reports/" + uniqueFileName,
-                MediaType = file.ContentType.StartsWith("image") ? "Image" : "Video",
-                CreatedAt = DateTime.UtcNow
-            };
-
-            report.ConfidenceScore = Math.Min(1.0f, report.ConfidenceScore + 0.3f);
-
-            _context.ReportMedias.Add(media);
-            await _context.SaveChangesAsync();
-
-            return "Media uploaded and confidence score increased!";
-        }
         public async Task<string> SubmitReportAsync(CreateReportDto reportDto, bool isStaff)
         {
             var thresholdTime = DateTime.UtcNow.AddHours(-2);
@@ -61,7 +33,7 @@ namespace Wasel_Palestine.BAL.Service
 
             var potentialDuplicates = await _context.Reports
                 .Include(r => r.Location)
-                .Where(r => r.DeletedAt == null && 
+                .Where(r => r.DeletedAt == null &&
                             r.CategoryId == reportDto.CategoryId &&
                             r.CreatedAt >= thresholdTime)
                 .ToListAsync();
@@ -93,7 +65,6 @@ namespace Wasel_Palestine.BAL.Service
                                          Math.Abs(l.Longitude - reportDto.Longitude) < 0.0001m);
 
             DAL.Model.Location locationToUse;
-
             if (existingLocation != null)
             {
                 locationToUse = existingLocation;
@@ -104,12 +75,17 @@ namespace Wasel_Palestine.BAL.Service
                 {
                     Latitude = reportDto.Latitude,
                     Longitude = reportDto.Longitude,
-                    City = reportDto.City , 
-                    AreaName = reportDto.AreaName ,
+                    City = reportDto.City,
+                    AreaName = reportDto.AreaName,
                     CreatedAt = DateTime.UtcNow,
                     Coordinates = new Point((double)reportDto.Longitude, (double)reportDto.Latitude) { SRID = 4326 }
                 };
             }
+
+            var allCheckpoints = await _context.Checkpoints.Include(c => c.Location).ToListAsync();
+            var nearbyCheckpoint = allCheckpoints
+                .FirstOrDefault(c => CalculateDistance((double)reportDto.Latitude, (double)reportDto.Longitude,
+                                                       (double)c.Location.Latitude, (double)c.Location.Longitude) <= 1.0);
 
             var newReport = new Report
             {
@@ -120,7 +96,8 @@ namespace Wasel_Palestine.BAL.Service
                 CreatedAt = DateTime.UtcNow,
                 StatusId = isStaff ? 2 : 1,
                 ConfidenceScore = isStaff ? staffScore : userInitialScore,
-                DeletedAt = null
+                DeletedAt = null,
+                CheckpointId = nearbyCheckpoint?.Id
             };
 
             _context.Reports.Add(newReport);
@@ -128,8 +105,87 @@ namespace Wasel_Palestine.BAL.Service
 
             if (isStaff) await CreateIncidentFromReportAsync(newReport);
 
-            return "Thank you! Your report has been received.";
+            return "Thank you! Your report has been received." + (nearbyCheckpoint != null ? $" Linked to {nearbyCheckpoint.NameAr}." : "");
         }
+
+        private async Task CreateIncidentFromReportAsync(Report report)
+        {
+            var confirmedStatus = await _context.IncidentStatuses.FirstOrDefaultAsync(s => s.Name == "Confirmed");
+            var mediumSeverity = await _context.IncidentSeverities.FirstOrDefaultAsync(s => s.Name == "Medium");
+
+            var newIncident = new Incident
+            {
+                Title = "Reported Incident",
+                Description = report.Description,
+                TitleAr = "بلاغ عن حادث/إغلاق",
+                DescriptionAr = report.Description ?? "لا يوجد وصف إضافي",
+                LocationId = report.LocationId,
+                CategoryId = report.CategoryId,
+                StatusId = confirmedStatus?.Id ?? 2,
+                SeverityId = mediumSeverity?.Id ?? 1,
+                CreatedAt = DateTime.UtcNow,
+                Verified = true,
+                VerifiedAt = DateTime.UtcNow,
+                CreatedByUserId = report.UserId,
+                IncidentMedia = new List<IncidentMedia>()
+            };
+
+            _context.Incidents.Add(newIncident);
+            await _context.SaveChangesAsync();
+
+            var alertRequest = new AlertCreateRequest
+            {
+                IncidentId = newIncident.Id
+            };
+
+            await _alertService.CreateAlertAsync(alertRequest, "SYSTEM", "127.0.0.1", "System-Auto");
+        }
+
+        public async Task<string> UploadReportMediaAsync(int reportId, string userId, IFormFile file)
+        {
+            var report = await _context.Reports.FindAsync(reportId);
+            if (report == null) return "Report not found";
+
+            string uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads/reports");
+            if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+            string uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
+            string filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var fileStream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(fileStream);
+            }
+
+            var media = new ReportMedia
+            {
+                ReportId = reportId,
+                UserId = userId,
+                MediaUrl = "/uploads/reports/" + uniqueFileName,
+                MediaType = file.ContentType.StartsWith("image") ? "Image" : "Video",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            report.ConfidenceScore = Math.Min(1.0f, report.ConfidenceScore + 0.3f);
+            _context.ReportMedias.Add(media);
+            await _context.SaveChangesAsync();
+
+            return "Media uploaded and confidence score increased!";
+        }
+
+        private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
+        {
+            var R = 6371;
+            var dLat = ToRadians(lat2 - lat1);
+            var dLon = ToRadians(lon2 - lon1);
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2)) *
+                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return R * c;
+        }
+
+        private double ToRadians(double angle) => (Math.PI / 180) * angle;
 
         public async Task<string> VoteOnReportAsync(int reportId, string userId, bool isUpvote)
         {
@@ -168,9 +224,9 @@ namespace Wasel_Palestine.BAL.Service
             var action = new ReportModerationAction
             {
                 ReportId = reportId,
-                ModeratorId = adminId, 
+                ModeratorId = adminId,
                 Action = "Soft Delete",
-                Notes = reason,     
+                Notes = reason,
                 ActionAt = DateTime.UtcNow
             };
 
@@ -183,7 +239,6 @@ namespace Wasel_Palestine.BAL.Service
         public async Task<List<HeatmapPointResponse>> GetIncidentHeatmapAsync(DateTime? fromDate)
         {
             var query = _context.Reports.AsQueryable();
-
             query = query.Where(r => r.DeletedAt == null && r.StatusId != 3);
 
             if (fromDate.HasValue)
@@ -198,58 +253,6 @@ namespace Wasel_Palestine.BAL.Service
                     Intensity = g.Count()
                 }).ToListAsync();
         }
-        private async Task CreateIncidentFromReportAsync(Report report)
-        {
-            var confirmedStatus = await _context.IncidentStatuses.FirstOrDefaultAsync(s => s.Name == "Confirmed");
-            var mediumSeverity = await _context.IncidentSeverities.FirstOrDefaultAsync(s => s.Name == "Medium");
-
-            var newIncident = new Incident
-            {
-                Title = "Reported Incident",
-                Description = report.Description,
-                TitleAr = "بلاغ عن حادث/إغلاق",
-                DescriptionAr = report.Description ?? "لا يوجد وصف إضافي",
-                LocationId = report.LocationId,
-                CategoryId = report.CategoryId,
-                StatusId = confirmedStatus?.Id ?? 2,
-                SeverityId = mediumSeverity?.Id ?? 1,
-                CreatedAt = DateTime.UtcNow,
-                Verified = true,
-                VerifiedAt = DateTime.UtcNow,
-                CreatedByUserId = report.UserId,
-                IncidentMedia = new List<IncidentMedia>()
-            };
-
-            _context.Incidents.Add(newIncident);
-
-            await _context.SaveChangesAsync();
-
-            var alert = new Alert
-            {
-                Title = "تنبيه جديد: " + newIncident.TitleAr,
-                Message = newIncident.DescriptionAr,
-                CreatedAt = DateTime.UtcNow,
-                IncidentId = newIncident.Id
-            };
-
-            _context.Alerts.Add(alert);
-            await _context.SaveChangesAsync(); 
-
-            var subscribers = await _context.AlertSubscriptions
-                .Where(s => s.CategoryId == report.CategoryId)
-                .ToListAsync();
-
-            foreach (var sub in subscribers)
-            {
-                _context.AlertRecipients.Add(new AlertRecipient
-                {
-                    AlertId = alert.Id,
-                    UserId = sub.UserId
-                });
-            }
-
-            await _context.SaveChangesAsync();
-        }
 
         public async Task<string> UpdateReportStatusAsync(int reportId, int newStatusId, string moderatorId, string notes)
         {
@@ -257,12 +260,7 @@ namespace Wasel_Palestine.BAL.Service
             if (report == null || report.DeletedAt != null) return "Report not found";
 
             report.StatusId = newStatusId;
-
-            if (newStatusId == 3)
-            {
-                report.ConfidenceScore = 0; 
-                                          
-            }
+            if (newStatusId == 3) report.ConfidenceScore = 0;
 
             var action = new ReportModerationAction
             {
@@ -286,7 +284,7 @@ namespace Wasel_Palestine.BAL.Service
 
             report.ConfidenceScore -= 0.2f;
             if (report.ConfidenceScore < 1.0f && report.StatusId == 2) report.StatusId = 1;
-            if (report.ConfidenceScore <= 0.31f) report.StatusId = 4; 
+            if (report.ConfidenceScore <= 0.31f) report.StatusId = 4;
 
             await _context.SaveChangesAsync();
             return "Thank you! Your feedback has been recorded.";
@@ -312,41 +310,19 @@ namespace Wasel_Palestine.BAL.Service
                 .ToListAsync();
         }
 
-        public async Task<string> SubscribeToAlertAsync(SubscribeAlertDto subscriptionDto)
+        public async Task<bool> MarkAlertAsReadAsync(int alertId, string userId)
         {
-            var isSubscribed = await _context.AlertSubscriptions
-                .AnyAsync(s => s.UserId == subscriptionDto.UserId &&
-                               s.LocationId == subscriptionDto.LocationId &&
-                               s.CategoryId == subscriptionDto.CategoryId);
+            var recipient = await _context.AlertRecipients
+                .FirstOrDefaultAsync(r => r.AlertId == alertId && r.UserId == userId);
 
-            if (isSubscribed) return "You are already subscribed to alerts.";
+            if (recipient == null) return false;
 
-            var subscription = new AlertSubscription
-            {
-                UserId = subscriptionDto.UserId,
-                LocationId = subscriptionDto.LocationId,
-                CategoryId = subscriptionDto.CategoryId,
-                CreatedAt = DateTime.UtcNow
-            };
+            recipient.IsRead = true;
+            _context.AlertRecipients.Update(recipient); 
 
-            _context.AlertSubscriptions.Add(subscription);
-            await _context.SaveChangesAsync();
-
-            return "Success: You will now receive alerts for this location.";
+            return await _context.SaveChangesAsync() > 0; 
         }
-
-        private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
-        {
-            var R = 6371;
-            var dLat = ToRadians(lat2 - lat1);
-            var dLon = ToRadians(lon2 - lon1);
-            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                    Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2)) *
-                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
-            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-            return R * c;
-        }
-
-        private double ToRadians(double angle) => (Math.PI / 180) * angle;
     }
+
+
 }

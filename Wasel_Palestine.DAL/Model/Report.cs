@@ -6,6 +6,8 @@ namespace Wasel_Palestine.DAL.Model
 {
     public class Report
     {
+        public int? CheckpointId;
+
         public int Id { get; set; }
 
         public string UserId { get; set; }

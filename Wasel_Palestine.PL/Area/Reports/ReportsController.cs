@@ -120,5 +120,19 @@ namespace Wasel_Palestine.PL.Area.Reports
 
             return Ok(new { success = true, message = result });
         }
+
+        [HttpGet("mark-as-read")]
+        [AllowAnonymous]
+        public async Task<IActionResult> MarkAsRead([FromQuery] int alertId, [FromQuery] string userId)
+        {
+            var success = await _reportingService.MarkAlertAsReadAsync(alertId, userId);
+
+            if (!success)
+            {
+                return BadRequest("تعذر تحديث الحالة. تأكد من صحة البيانات.");
+            }
+
+            return Content("<h3>تمت العملية بنجاح! تم تسجيل قراءة التنبيه.</h3>", "text/html; charset=utf-8");
+        }
     }
 }

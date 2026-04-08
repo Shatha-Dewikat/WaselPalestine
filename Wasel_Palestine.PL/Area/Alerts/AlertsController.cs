@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Wasel_Palestine.BAL.DTOs;
+using Wasel_Palestine.BAL.Service;
 using Wasel_Palestine.BLL.Service;
 using Wasel_Palestine.DAL.DTO.Request;
 
@@ -76,6 +78,32 @@ namespace Wasel_Palestine.PL.Area.Alerts
         {
             var history = await _alertService.GetAlertHistoryAsync(id);
             return Ok(new { success = true, data = history });
+        }
+
+        [HttpPost("subscribe")]
+        [Authorize]
+        public async Task<IActionResult> Subscribe([FromBody] SubscribeAlertDto dto)
+        {
+            dto.UserId = User.FindFirst("UserId")?.Value; 
+            var result = await _alertService.SubscribeToAlertAsync(dto);
+            return Ok(new { success = true, message = result });
+        }
+        [HttpGet("unsubscribe")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Unsubscribe([FromQuery] int alertId, [FromQuery] string userId)
+        {
+            var result = await _alertService.UnsubscribeFromAlertsAsync(alertId, userId);
+            if (!result) return BadRequest("لم يتم العثور على اشتراك نشط.");
+
+            return Content("<h2 style='color:orange;'>تم إلغاء الاشتراك بنجاح</h2>", "text/html; charset=utf-8");
+        }
+
+        [HttpGet("alerts-stats")]
+        [Authorize(Roles = "Moderator,Admin")]
+        public async Task<IActionResult> GetAlertsStats()
+        {
+            var stats = await _alertService.GetAlertsStatisticsAsync();
+            return Ok(new { success = true, data = stats });
         }
 
 

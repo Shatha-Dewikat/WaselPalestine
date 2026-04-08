@@ -71,17 +71,7 @@ namespace Wasel_Palestine.PL.Area.Controllers
         }
 
       
-        //[HttpPost("submit-report")]
-        //public async Task<IActionResult> PostReport([FromBody] CreateReportDto reportDto)
-        //{
-        //    var result = await _reportingService.SubmitReportAsync(reportDto);
-
-        //    if (result.StartsWith("Success"))
-        //        return Ok(new { message = result });
-
-        //    return Conflict(new { message = result });
-        //}
-
+        
        
         [HttpPost("dismiss-report/{id}")]
         public async Task<IActionResult> DismissReport(int id)
@@ -103,15 +93,6 @@ namespace Wasel_Palestine.PL.Area.Controllers
         }
 
        
-        [HttpPost("subscribe-alert")]
-        public async Task<IActionResult> SubscribeAlert([FromBody] SubscribeAlertDto subscriptionDto)
-        {
-            var result = await _reportingService.SubscribeToAlertAsync(subscriptionDto);
-
-            if (result.StartsWith("Success"))
-                return Ok(new { message = result });
-
-            return BadRequest(new { message = result });
-        }
+      
     }
 }
