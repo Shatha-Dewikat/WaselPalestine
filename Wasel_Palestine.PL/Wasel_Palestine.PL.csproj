@@ -30,7 +30,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Area\Routes\" />
 		<Folder Include="wwwroot\images\" />
 	</ItemGroup>
 
