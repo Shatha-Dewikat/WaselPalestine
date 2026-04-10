@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Wasel_Palestine.BLL.Service;
 using Wasel_Palestine.DAL.DTO.Request;
 
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [ApiController]
 public class IncidentMediasController : ControllerBase
 {

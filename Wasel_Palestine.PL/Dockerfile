@@ -29,4 +29,10 @@ RUN dotnet publish "./Wasel_Palestine.PL.csproj" -c $BUILD_CONFIGURATION -o /app
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+
+# السطور الضرورية للخرائط (Spatial Data)
+USER root
+RUN apt-get update && apt-get install -y libgdiplus libsqlite3-mod-spatialite
+USER $APP_UID
+
 ENTRYPOINT ["dotnet", "Wasel_Palestine.PL.dll"]

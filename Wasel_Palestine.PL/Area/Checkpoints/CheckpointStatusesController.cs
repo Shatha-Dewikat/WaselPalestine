@@ -7,7 +7,7 @@ using Wasel_Palestine.DAL.DTO.Request;
 
 namespace Wasel_Palestine.PL.Area.Checkpoints
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     public class CheckpointStatusesController : ControllerBase
     {

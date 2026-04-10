@@ -7,7 +7,7 @@ using Wasel_Palestine.BLL.Service;
 
 namespace Wasel_Palestine.PL.Area.Reports
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     [Authorize(Roles = "Admin,Moderator")]
     public class ReportsController : ControllerBase

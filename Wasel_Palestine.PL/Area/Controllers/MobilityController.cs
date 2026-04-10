@@ -6,7 +6,7 @@ using Wasel_Palestine.BLL.Service;
 
 namespace Wasel_Palestine.PL.Area.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     public class MobilityController : ControllerBase
     {

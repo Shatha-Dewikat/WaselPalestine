@@ -544,7 +544,7 @@ namespace Wasel_Palestine.BLL.Service
                 {
                     Latitude = g.Key.Lat,
                     Longitude = g.Key.Lon,
-                    Intensity = g.Count()
+                    Intensity = g.Count() 
                 })
                 .ToListAsync();
 

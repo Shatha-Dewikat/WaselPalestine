@@ -22,7 +22,7 @@ namespace Wasel_Palestine.PL
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddMemoryCache();
-
+            builder.Services.AddResponseCompression();
             // DbContext
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(
@@ -169,14 +169,21 @@ namespace Wasel_Palestine.PL
             app.UseStaticFiles();
             app.UseAuthentication();
             app.UseAuthorization();
-
+           
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var context = services.GetRequiredService<ApplicationDbContext>();
+               // context.Database.Migrate(); 
+                context.Database.EnsureCreated();
+            }
             if (app.Environment.IsDevelopment())
             {
                 app.MapOpenApi();
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
+            app.UseResponseCompression();
             app.MapControllers();
             app.Run();
         }
