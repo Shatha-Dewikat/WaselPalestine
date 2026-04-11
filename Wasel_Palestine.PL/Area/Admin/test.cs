@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Wasel_Palestine.PL.Area.Admin
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     public class test : ControllerBase
     {

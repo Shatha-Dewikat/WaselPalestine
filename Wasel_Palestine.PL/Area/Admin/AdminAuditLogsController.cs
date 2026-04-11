@@ -6,7 +6,7 @@ using Wasel_Palestine.DAL.Data;
 namespace Wasel_Palestine.PL.Area.Admin
 {
     [ApiController]
-    [Route("api/admin/auditlogs")]
+    [Route("api/v1/admin/auditlogs")]
     [Authorize(Policy = "AdminOnly")]
     public class AdminAuditLogsController : ControllerBase
     {
