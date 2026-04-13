@@ -25,24 +25,19 @@ namespace Wasel_Palestine.PL.Area.Admin
             _db = db;
         }
 
-        
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
+            var total = await _userManager.Users.CountAsync();
             var users = await _userManager.Users
-                .Select(u => new
-                {
-                    u.Id,
-                    u.Email,
-                    u.UserName,
-                    u.FullName,
-                    u.IsActive
-                })
+                .OrderBy(u => u.Id) // ضروري قبل Skip
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(u => new { u.Id, u.Email, u.UserName, u.FullName, u.IsActive })
                 .ToListAsync();
 
-            return Ok(users);
+            return Ok(new { total, page, pageSize, users });
         }
-
         [HttpGet("{userId}/roles")]
         public async Task<IActionResult> GetRoles(string userId)
         {

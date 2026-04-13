@@ -46,14 +46,27 @@ namespace Wasel_Palestine.BLL.Service
                     };
                 }
 
-                var result = await _userManager.CheckPasswordAsync(user, loginRequest.Password);
+                var result = await _signInManager.CheckPasswordSignInAsync(user, loginRequest.Password, lockoutOnFailure: true);
 
-                if (!result)
+                if (result.IsLockedOut)
                 {
                     return new LoginResponse
                     {
                         Success = false,
-                        Message = "invalid password"
+                        Message = "Your account is locked due to too many incorrect attempts. Please wait 10 minutes."
+                    };
+                }
+                if (!result.Succeeded)
+                {
+                    return new LoginResponse { Success = false, Message = "invalid password" };
+                }
+               
+                if (!user.IsActive)
+                {
+                    return new LoginResponse
+                    {
+                        Success = false,
+                        Message = "Your account has been deactivated. Please contact support."
                     };
                 }
                 if (!user.EmailConfirmed)
@@ -132,7 +145,8 @@ namespace Wasel_Palestine.BLL.Service
               
                 var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
-                var confirmationLink = $"http://localhost:5034/api/auth/Auth/ConfirmEmail?userId={user.Id}&token={encodedToken}";
+                var confirmationLink = $"http://localhost:32768/api/auth/Auth/ConfirmEmail?userId={user.Id}&token={encodedToken}";
+                //                var confirmationLink = $"http://localhost:5034/api/auth/Auth/ConfirmEmail?userId={user.Id}&token={encodedToken}";
 
                 await _emailSender.SendEmailAsync(
                     user.Email,

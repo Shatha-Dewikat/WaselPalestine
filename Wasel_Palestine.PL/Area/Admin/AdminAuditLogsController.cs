@@ -7,7 +7,8 @@ namespace Wasel_Palestine.PL.Area.Admin
 {
     [ApiController]
     [Route("api/admin/auditlogs")]
-    [Authorize(Policy = "AdminOnly")]
+    [Authorize(Roles = "Moderator,Admin")]
+
     public class AdminAuditLogsController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
