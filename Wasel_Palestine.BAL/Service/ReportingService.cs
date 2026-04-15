@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using NetTopologySuite.Geometries;
 using Wasel_Palestine.BAL.DTOs;
 using Wasel_Palestine.BLL.Service;
@@ -16,130 +17,249 @@ namespace Wasel_Palestine.BAL.Service
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
         private readonly IAlertService _alertService;
+        private readonly IMemoryCache _cache;
 
-        public ReportingService(ApplicationDbContext context, IWebHostEnvironment environment, IAlertService alertService)
+        public ReportingService(ApplicationDbContext context, IWebHostEnvironment environment, IAlertService alertService, IMemoryCache cache)
         {
             _context = context;
             _environment = environment;
             _alertService = alertService;
+            _cache = cache;
         }
 
         public async Task<string> SubmitReportAsync(CreateReportDto reportDto, bool isStaff)
+
         {
+
             var thresholdTime = DateTime.UtcNow.AddHours(-2);
+
             float staffScore = 1.0f;
+
             float userInitialScore = 0.4f;
+
             float confirmationIncrement = 0.2f;
 
+
+
             var potentialDuplicates = await _context.Reports
+
                 .Include(r => r.Location)
+
                 .Where(r => r.DeletedAt == null &&
+
                             r.CategoryId == reportDto.CategoryId &&
+
                             r.CreatedAt >= thresholdTime)
+
                 .ToListAsync();
 
+
+
             var existingDuplicate = potentialDuplicates
+
                 .FirstOrDefault(r => CalculateDistance((double)reportDto.Latitude, (double)reportDto.Longitude,
+
                                                        (double)r.Location.Latitude, (double)r.Location.Longitude) <= 0.5);
 
+
+
             if (existingDuplicate != null)
+
             {
+
                 if (existingDuplicate.UserId == reportDto.UserId)
+
                     return "You have already reported this incident.";
 
+
+
                 existingDuplicate.ConfidenceScore = isStaff ? staffScore : Math.Min(1.0f, existingDuplicate.ConfidenceScore + confirmationIncrement);
+
                 existingDuplicate.CreatedAt = DateTime.UtcNow;
 
+
+
                 if (existingDuplicate.ConfidenceScore >= 1.0f)
+
                 {
+
                     var alreadyHasIncident = await _context.Incidents.AnyAsync(i => i.LocationId == existingDuplicate.LocationId && i.CreatedAt >= thresholdTime);
+
                     if (!alreadyHasIncident) await CreateIncidentFromReportAsync(existingDuplicate);
+
                 }
 
+
+
                 await _context.SaveChangesAsync();
+
                 return "Thank you! Your confirmation has been added.";
+
             }
+
+
 
             var existingLocation = await _context.Locations
+
                 .FirstOrDefaultAsync(l => Math.Abs(l.Latitude - reportDto.Latitude) < 0.0001m &&
+
                                          Math.Abs(l.Longitude - reportDto.Longitude) < 0.0001m);
 
+
+
             DAL.Model.Location locationToUse;
+
             if (existingLocation != null)
+
             {
+
                 locationToUse = existingLocation;
+
             }
+
             else
+
             {
+
                 locationToUse = new DAL.Model.Location
+
                 {
+
                     Latitude = reportDto.Latitude,
+
                     Longitude = reportDto.Longitude,
+
                     City = reportDto.City,
+
                     AreaName = reportDto.AreaName,
+
                     CreatedAt = DateTime.UtcNow,
+
                     Coordinates = new Point((double)reportDto.Longitude, (double)reportDto.Latitude) { SRID = 4326 }
+
                 };
+
             }
+
+
 
             var allCheckpoints = await _context.Checkpoints.Include(c => c.Location).ToListAsync();
+
             var nearbyCheckpoint = allCheckpoints
+
                 .FirstOrDefault(c => CalculateDistance((double)reportDto.Latitude, (double)reportDto.Longitude,
+
                                                        (double)c.Location.Latitude, (double)c.Location.Longitude) <= 1.0);
 
+
+
             var newReport = new Report
+
             {
+
                 Location = locationToUse,
+
                 Description = reportDto.Description ?? "بلاغ عن " + locationToUse.City,
+
                 CategoryId = reportDto.CategoryId,
+
                 UserId = reportDto.UserId,
+
                 CreatedAt = DateTime.UtcNow,
+
                 StatusId = isStaff ? 2 : 1,
+
                 ConfidenceScore = isStaff ? staffScore : userInitialScore,
+
                 DeletedAt = null,
+
                 CheckpointId = nearbyCheckpoint?.Id
+
             };
 
+
+
             _context.Reports.Add(newReport);
+
             await _context.SaveChangesAsync();
+
+
 
             if (isStaff) await CreateIncidentFromReportAsync(newReport);
 
+
+
             return "Thank you! Your report has been received." + (nearbyCheckpoint != null ? $" Linked to {nearbyCheckpoint.NameAr}." : "");
+
         }
+
+
 
         private async Task CreateIncidentFromReportAsync(Report report)
+
         {
+
             var confirmedStatus = await _context.IncidentStatuses.FirstOrDefaultAsync(s => s.Name == "Confirmed");
+
             var mediumSeverity = await _context.IncidentSeverities.FirstOrDefaultAsync(s => s.Name == "Medium");
 
+
+
             var newIncident = new Incident
+
             {
+
                 Title = "Reported Incident",
+
                 Description = report.Description,
+
                 TitleAr = "بلاغ عن حادث/إغلاق",
+
                 DescriptionAr = report.Description ?? "لا يوجد وصف إضافي",
+
                 LocationId = report.LocationId,
+
                 CategoryId = report.CategoryId,
+
                 StatusId = confirmedStatus?.Id ?? 2,
+
                 SeverityId = mediumSeverity?.Id ?? 1,
+
                 CreatedAt = DateTime.UtcNow,
+
                 Verified = true,
+
                 VerifiedAt = DateTime.UtcNow,
+
                 CreatedByUserId = report.UserId,
+
                 IncidentMedia = new List<IncidentMedia>()
+
             };
+
+
 
             _context.Incidents.Add(newIncident);
+
             await _context.SaveChangesAsync();
 
+
+
             var alertRequest = new AlertCreateRequest
+
             {
+
                 IncidentId = newIncident.Id
+
             };
 
+
+
             await _alertService.CreateAlertAsync(alertRequest, "SYSTEM", "127.0.0.1", "System-Auto");
+
         }
+
+
 
         public async Task<string> UploadReportMediaAsync(int reportId, string userId, IFormFile file)
         {

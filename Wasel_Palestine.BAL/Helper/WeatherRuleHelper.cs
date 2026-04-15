@@ -8,12 +8,10 @@ namespace Wasel_Palestine.BLL.Helper
         {
             if (string.IsNullOrWhiteSpace(condition)) return null;
 
-            // تحويل النص لحروف صغيرة للمقارنة بشكل أدق وتجنب مشاكل الحروف الكبيرة والصغيرة
             var lowerCondition = condition.ToLower();
 
             return lowerCondition switch
             {
-                // استخدام Contains للبحث عن الكلمات المفتاحية داخل النص القادم
                 var c when c.Contains("clear") || c.Contains("cloudy")
                     => ("Test Weather", "هذا بلاغ تجريبي للتأكد من عمل النظام في الجو الصافي أو الغائم جزئياً", 1),
 

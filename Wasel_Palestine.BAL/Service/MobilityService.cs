@@ -17,46 +17,50 @@ namespace Wasel_Palestine.BAL.Service
             _context = context;
         }
 
-        public async Task<RouteResponseDto> EstimateRouteAsync(double startLat, double startLng, double endLat, double endLng)
+        public async Task<RouteResponseDto> EstimateRouteAsync(double startLat, double startLng, double endLat, double endLng, bool avoidCheckpoints = false)
         {
             var url = $"http://router.project-osrm.org/route/v1/driving/{startLng},{startLat};{endLng},{endLat}?overview=false";
             var response = await _httpClient.GetAsync(url);
 
             if (!response.IsSuccessStatusCode)
-                throw new Exception("Routing service (OSRM) unavailable");
+                throw new Exception("Routing service (OSRM) unavailable. Please check your internet connection.");
 
             var json = await response.Content.ReadFromJsonAsync<JsonElement>();
-            var route = json.GetProperty("routes")[0];
 
-            double distance = route.GetProperty("distance").GetDouble() / 1000;
-            double baseDuration = route.GetProperty("duration").GetDouble() / 60;
+            if (!json.TryGetProperty("routes", out var routes) || routes.GetArrayLength() == 0)
+                throw new Exception("No route found between the specified coordinates.");
+
+            var route = routes[0];
+            double distance = route.GetProperty("distance").GetDouble() / 1000; 
+            double baseDuration = route.GetProperty("duration").GetDouble() / 60; 
 
             List<string> factorDetails = new List<string>();
             double totalAdditionalDelay = 0;
 
-            var activeCheckpoints = await _context.Checkpoints
+           
+            var problematicCheckpoints = await _context.Checkpoints
                 .Where(c => c.CurrentStatus != "Open")
                 .ToListAsync();
 
-            foreach (var cp in activeCheckpoints)
+            foreach (var cp in problematicCheckpoints)
             {
-                string cpName = cp.NameAr;
+                if (avoidCheckpoints)
+                {
+                    totalAdditionalDelay += 120;
+                    factorDetails.Add($"[تجنب] تم حساب طريق بديل لتفادي منطقة {cp.NameAr}");
+                }
+                else
+                {
+                    double delay = cp.CurrentStatus switch
+                    {
+                        "Closed" => 60,          
+                        "Partially Closed" => 30,  
+                        "Busy" => (double)(cp.EstimatedDelayMinutes > 0 ? cp.EstimatedDelayMinutes : 15),
+                        _ => 10
+                    };
 
-                if (cp.CurrentStatus == "Closed")
-                {
-                    totalAdditionalDelay += 45;
-                    factorDetails.Add($"{cpName} مغلق تماماً");
-                }
-                else if (cp.CurrentStatus == "Partially Closed")
-                {
-                    totalAdditionalDelay += 25;
-                    factorDetails.Add($"{cpName} مفتوح جزئياً");
-                }
-                else if (cp.CurrentStatus == "Busy")
-                {
-                    int delay = (int)(cp.EstimatedDelayMinutes > 0 ? cp.EstimatedDelayMinutes : 15);
                     totalAdditionalDelay += delay;
-                    factorDetails.Add($"ازدحام مروري عند {cpName}");
+                    factorDetails.Add($"{cp.NameAr}: {cp.CurrentStatus} (+{delay} min)");
                 }
             }
 
@@ -71,29 +75,38 @@ namespace Wasel_Palestine.BAL.Service
             foreach (var incident in activeIncidents)
             {
                 incidentCount++;
-                double incidentDelay = (incident.Severity?.Name == "High") ? 20 : 10;
+                double incidentDelay = incident.Severity?.Name switch
+                {
+                    "High" => 25,
+                    "Medium" => 15,
+                    _ => 5
+                };
+
                 totalAdditionalDelay += incidentDelay;
 
                 if (incidentCount <= 3)
                 {
-                    string prefix = incident.Severity?.Name == "High" ? "تأخير شديد" : "تنبيه";
-                    factorDetails.Add($"{prefix}: {incident.TitleAr}");
+                    string severityPrefix = incident.Severity?.Name == "High" ? "خطر شديد" : "تنبيه";
+                    factorDetails.Add($"{severityPrefix}: {incident.TitleAr}");
                 }
             }
 
             if (incidentCount > 3)
             {
-                factorDetails.Add($"+ {incidentCount - 3} بلاغات أخرى عن عوائق في الطريق");
+                factorDetails.Add($"+ يوجد {incidentCount - 3} عوائق أخرى تم أخذها في الحسبان");
             }
 
             return new RouteResponseDto
             {
-                DistanceKm = Math.Round(distance, 2),
+                DistanceKm = avoidCheckpoints ? Math.Round(distance * 1.4, 2) : Math.Round(distance, 2),
+
                 DurationMinutes = Math.Round(baseDuration + totalAdditionalDelay, 0),
-                Remarks = factorDetails.Count > 0
+
+                Remarks = factorDetails.Any()
                           ? string.Join(" | ", factorDetails)
                           : "الطريق سالك حالياً بناءً على البيانات المتوفرة.",
-                Metadata = $"Analysis based on {activeCheckpoints.Count} checkpoints and {activeIncidents.Count} verified incidents."
+
+                Metadata = $"Analysis based on {problematicCheckpoints.Count} checkpoints and {activeIncidents.Count} live incidents. AvoidMode: {avoidCheckpoints}"
             };
         }
     }

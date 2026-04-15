@@ -56,23 +56,7 @@ namespace Wasel_Palestine.PL.Area.Controllers
         }
 
       
-        //[HttpGet("estimate-route")]
-        //public async Task<IActionResult> GetRoute([FromQuery] double sLat, [FromQuery] double sLng, [FromQuery] double eLat, [FromQuery] double eLng)
-        //{
-        //    try
-        //    {
-        //        var route = await _mobilityService.EstimateRouteAsync(sLat, sLng, eLat, eLng);
-        //        return Ok(route);
-        //    }
-        //    catch
-        //    {
-        //        return StatusCode(503, new { message = "Routing service unavailable" });
-        //    }
-        //}
-
       
-        
-       
         [HttpPost("dismiss-report/{id}")]
         public async Task<IActionResult> DismissReport(int id)
         {

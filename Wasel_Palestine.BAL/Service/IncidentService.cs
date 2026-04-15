@@ -531,21 +531,24 @@ namespace Wasel_Palestine.BLL.Service
 
         public async Task<List<HeatmapPointResponse>> GetIncidentHeatmapAsync(DateTime? fromDate)
         {
-            fromDate ??= DateTime.UtcNow.AddMonths(-1);
+            var filterDate = fromDate ?? DateTime.UtcNow.AddMonths(-1);
 
-            var data = await _context.Incidents
-                .Include(i => i.Location)
-                .Where(i => i.CreatedAt >= fromDate && i.Location != null)
-                .GroupBy(i => new {
-                    Lat = Math.Round((double)i.Location.Latitude, 3),
-                    Lon = Math.Round((double)i.Location.Longitude, 3)
-                })
-                .Select(g => new HeatmapPointResponse
-                {
-                    Latitude = g.Key.Lat,
-                    Longitude = g.Key.Lon,
-                    Intensity = g.Count() 
-                })
+           
+            string sql = @"
+        SELECT 
+            ROUND(CAST(L.Latitude AS FLOAT), 3) AS Latitude, 
+            ROUND(CAST(L.Longitude AS FLOAT), 3) AS Longitude, 
+            COUNT(I.Id) AS Intensity
+        FROM Incidents I
+        INNER JOIN Locations L ON I.LocationId = L.Id
+        WHERE I.CreatedAt >= {0} 
+          AND I.DeletedAt IS NULL
+        GROUP BY ROUND(CAST(L.Latitude AS FLOAT), 3), ROUND(CAST(L.Longitude AS FLOAT), 3)
+        ORDER BY Intensity DESC";
+
+           
+            var data = await _context.Database
+                .SqlQueryRaw<HeatmapPointResponse>(sql, filterDate)
                 .ToListAsync();
 
             return data;

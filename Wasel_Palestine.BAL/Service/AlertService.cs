@@ -101,8 +101,8 @@ namespace Wasel_Palestine.BLL.Service
                 {
                     if (!string.IsNullOrEmpty(sub.Email))
                     {
-                        string readUrl = $"http://localhost:5034/api/Reports/mark-as-read?alertId={alert.Id}&userId={sub.UserId}";
-                        string unsubscribeUrl = $"http://localhost:5034/api/Alerts/unsubscribe?alertId={alert.Id}&userId={sub.UserId}";
+                        string readUrl = $"http://localhost:32772/api/v1/Reports/mark-as-read?alertId={alert.Id}&userId={sub.UserId}";
+                        string unsubscribeUrl = $"http://localhost:32772/api/v1/Alerts/unsubscribe?alertId={alert.Id}&userId={sub.UserId}";
                         string emailHtml = $@"
                             <div dir='rtl' style='font-family: Arial, sans-serif; border: 1px solid #ddd; padding: 25px; text-align: right; max-width: 600px; margin: auto;'>
                                 <h2 style='color: #d9534f; border-bottom: 2px solid #d9534f; padding-bottom: 10px;'>تنبيه طارئ: {alert.Title}</h2>

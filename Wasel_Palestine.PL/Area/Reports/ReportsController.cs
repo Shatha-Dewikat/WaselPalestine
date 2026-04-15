@@ -9,7 +9,7 @@ namespace Wasel_Palestine.PL.Area.Reports
 {
     [Route("api/v1/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin,Moderator")]
+
     public class ReportsController : ControllerBase
     {
         private readonly IIncidentService _incidentService;
@@ -69,13 +69,26 @@ namespace Wasel_Palestine.PL.Area.Reports
         [Authorize]
         public async Task<IActionResult> SubmitReport([FromBody] CreateReportDto reportDto)
         {
-            reportDto.UserId = User.FindFirst("UserId")?.Value;
+            try
+            {
+                reportDto.UserId = User.FindFirst("UserId")?.Value;
 
-            bool isStaff = User.IsInRole("Moderator") || User.IsInRole("Admin");
+                bool isStaff = User.IsInRole("Moderator") || User.IsInRole("Admin");
 
-            var result = await _reportingService.SubmitReportAsync(reportDto, isStaff);
+                var result = await _reportingService.SubmitReportAsync(reportDto, isStaff);
 
-            return Ok(new { success = true, message = result });
+                return Ok(new { success = true, message = result });
+            }
+            catch (Exception ex)
+            {
+                
+
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Something went wrong on our end. Please try again later."
+                });
+            }
         }
 
         [HttpPost("{id}/vote")]

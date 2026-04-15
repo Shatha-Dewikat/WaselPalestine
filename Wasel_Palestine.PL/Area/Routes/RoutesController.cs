@@ -17,12 +17,14 @@ namespace Wasel_Palestine.PL.Area.Routes
             _mobilityService = mobilityService;
         }
 
-  
+
+
         [HttpGet("estimate-route")]
         [Authorize]
         public async Task<IActionResult> GetRoute(
-            [FromQuery] double sLat, [FromQuery] double sLng,
-            [FromQuery] double eLat, [FromQuery] double eLng)
+     [FromQuery] double sLat, [FromQuery] double sLng,
+     [FromQuery] double eLat, [FromQuery] double eLng,
+     [FromQuery] bool avoidCheckpoints = false)
         {
             if (sLat == 0 || sLng == 0 || eLat == 0 || eLng == 0)
             {
@@ -31,7 +33,7 @@ namespace Wasel_Palestine.PL.Area.Routes
 
             try
             {
-                var routeResult = await _mobilityService.EstimateRouteAsync(sLat, sLng, eLat, eLng);
+                var routeResult = await _mobilityService.EstimateRouteAsync(sLat, sLng, eLat, eLng, avoidCheckpoints);
 
                 return Ok(new
                 {
