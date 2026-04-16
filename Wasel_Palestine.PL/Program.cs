@@ -85,6 +85,7 @@ builder.Services.AddRateLimiter(options =>
    
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+<<<<<<< Updated upstream
     options.AddFixedWindowLimiter("auth", opt =>
     {
         opt.Window = TimeSpan.FromMinutes(1);
@@ -98,6 +99,41 @@ builder.Services.AddRateLimiter(options =>
     options.Filters.Add(new Microsoft.AspNetCore.Mvc.Authorization.AuthorizeFilter("ActiveUserOnly"));
 })
 .AddApplicationPart(typeof(Wasel_Palestine.PL.Program).Assembly);
+=======
+            builder.Services.AddHttpContextAccessor();
+
+           
+           
+            builder.Services.AddScoped<MobilityService>();
+            builder.Services.AddScoped<ReportingService>();
+
+            // Services
+            builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+            builder.Services.AddScoped<ITokenService, TokenService>();
+            builder.Services.AddTransient<IEmailSender, EmailSender>();
+            builder.Services.AddScoped<ICheckpointStatusService, CheckpointStatusService>();
+            builder.Services.AddScoped<IIncidentService, IncidentService>();
+            builder.Services.AddScoped<IIncidentCategoryService, IncidentCategoryService>();
+            builder.Services.AddScoped<IIncidentSeverityService, IncidentSeverityService>();
+            builder.Services.AddScoped<IIncidentStatusService, IncidentStatusService>();
+            builder.Services.AddScoped<IIncidentMediaService, IncidentMediaService>();
+            builder.Services.AddScoped<IFileService, FileService>();
+            builder.Services.AddScoped<ICheckpointService, CheckpointService>();
+            builder.Services.AddHttpClient<IWeatherService, WeatherService>();
+            //builder.Services.AddHostedService<WeatherBackgroundService>();
+            builder.Services.AddScoped<IAlertService, AlertService>();
+
+            // Repositories
+            builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
+            builder.Services.AddScoped<IIncidentCategoryRepository, IncidentCategoryRepository>();
+            builder.Services.AddScoped<IIncidentHistoryRepository, IncidentHistoryRepository>();
+            builder.Services.AddScoped<IIncidentSeverityRepository, IncidentSeverityRepository>();
+            builder.Services.AddScoped<IIncidentStatusRepository, IncidentStatusRepository>();
+            builder.Services.AddScoped<IIncidentMediaRepository, IncidentMediaRepository>();
+            builder.Services.AddScoped<ICheckpointRepository, CheckpointRepository>();
+            builder.Services.AddScoped<ICheckpointStatusRepository, CheckpointStatusRepository>();
+            builder.Services.AddScoped<IAlertRepository, AlertRepository>();
+>>>>>>> Stashed changes
 
             // Seeders
             builder.Services.AddScoped<RoleSeedData>();
