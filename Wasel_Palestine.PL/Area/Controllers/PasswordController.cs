@@ -79,7 +79,7 @@ namespace Wasel_Palestine.PL.Area.Controllers
             var user = await _userManager.FindByEmailAsync(req.Email);
             if (user == null) return BadRequest("Invalid request");
 
-            var result = await _userManager.ResetPasswordAsync(user, req.Token, req.NewPassword);
+            var result = await _userManager.ResetPasswordAsync(user, req.Code, req.NewPassword);
             if (!result.Succeeded) return BadRequest(result.Errors);
 
             // revoke كل refresh tokens (logout all devices)

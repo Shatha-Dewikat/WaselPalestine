@@ -9,7 +9,7 @@ namespace Wasel_Palestine.DAL.Model
 
         public int Id { get; set; }
         public string Name { get; set; }
-
+        public int Level { get; set; }
         public List<Incident> Incidents { get; set; }
     }
 }
