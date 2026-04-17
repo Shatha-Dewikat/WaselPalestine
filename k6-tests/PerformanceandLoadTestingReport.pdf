@@ -1,0 +1,109 @@
+Performance and Load Testing Report
+
+1. Introduction
+
+This report evaluates the performance of the Wasel Palestine system using k6. The goal of the testing was to measure how the system behaves under different load patterns, especially for read and write operations, and to identify any performance bottlenecks or stability issues.
+
+The following scenarios were tested:
+- Read-heavy workload using incident listing
+- Write-heavy workload using report submission
+- Mixed workload combining reads and writes
+- Spike testing
+- Sustained load (soak testing)
+
+The main metrics collected were:
+- Average response time
+- p95 latency
+- Throughput
+- Error rate
+- Identified bottlenecks
+
+2. Test Scenarios
+
+The performance tests were implemented using k6 scripts and executed locally against the running API.
+
+2.1 Read-heavy workload
+
+This scenario focused on repeated requests to the incident listing endpoint. The purpose was to evaluate system behavior when most traffic is read-oriented. The final high-load read-heavy run showed an average response time of 1.28 ms, a p95 latency of 3.17 ms, a throughput of 19.93 requests/second, and an error rate of 91.66%.
+
+2.2 Write-heavy workload
+
+This scenario tested repeated submissions to the report submission endpoint. It was used to evaluate the performance of write operations after fixing the report submission flow. The write-heavy workload achieved an average response time of 3.79 ms, a p95 latency of 9.03 ms, a throughput of 4.98 requests/second, and an error rate of 0%.
+
+2.3 Mixed workload
+
+This scenario combined incident-listing reads with report-submission writes. It was intended to simulate a more realistic workload where users both browse data and submit reports. The mixed workload achieved an average response time of 2.45 ms, a p95 latency of 7.40 ms, a throughput of 7.96 requests/second, and an error rate of 41.66%. The results showed that the write operations succeeded, while most of the failures came from the read side.
+
+2.4 Spike testing
+
+The spike test was used to examine how the system reacts to a sudden increase in traffic. The scenario produced an average response time of 0.66 ms, a p95 latency of 3.42 ms, a throughput of 13.09 requests/second, and an error rate of 84.75%.
+
+2.5 Soak testing
+
+The soak test applied sustained load for a longer period in order to evaluate stability over time. The scenario produced an average response time of 1.74 ms, a p95 latency of 5.21 ms, a throughput of 4.99 requests/second, and an error rate of 63.66%.
+
+3. Performance Results Summary
+
+Scenario        Average Response Time    p95 Latency    Throughput        Error Rate
+Read-heavy      1.28 ms                  3.17 ms        19.93 req/s       91.66%
+Write-heavy     3.79 ms                  9.03 ms        4.98 req/s        0.00%
+Mixed           2.45 ms                  7.40 ms        7.96 req/s        41.66%
+Spike           0.66 ms                  3.42 ms        13.09 req/s       84.75%
+Soak            1.74 ms                  5.21 ms        4.99 req/s        63.66%
+
+These values were taken directly from the final k6 executions.
+
+4. Observed Limitations
+
+The main limitation observed during testing was that the system was fast for successful requests, but not stable under read-oriented load. In several scenarios, especially read-heavy, spike, and soak tests, the response times remained low, but the failure rate became very high. This means that latency itself was not the biggest issue. The more serious issue was the inability of the system to handle large numbers of concurrent read requests consistently.
+
+Another limitation was that the mixed workload also failed mainly because of the read requests, while the write requests remained successful. This shows that the problem is concentrated in the read path rather than the write path.
+
+5. Root Causes
+
+The testing results suggest that the root causes are mainly related to read-side scalability and request control.
+
+First, the incident listing endpoint showed very high failure rates under heavy and sustained load, even though successful requests were returned quickly. This indicates that the endpoint or its related backend logic could not handle concurrency efficiently.
+
+Second, repeated 429 Too many requests responses appeared during testing, which indicates that rate limiting or throttling behavior also contributed to the failures under higher request volume.
+
+Third, the write-heavy test performed much better than the read-heavy and mixed tests, which suggests that the report submission path, once repaired, was more stable than the incident listing path. The write-heavy scenario finished with 0% error rate, which strongly supports this conclusion.
+
+6. Optimizations Applied
+
+Before running the final performance tests, several fixes and optimizations were applied to make the environment stable enough for testing.
+
+The project build issues were fixed, the local Docker SQL setup was stabilized, and missing database reference data such as categories and report statuses were added. In addition, the report submission path was repaired so that write operations could be tested successfully. After these fixes, the write-heavy workload became fully stable and completed with no failed requests.
+
+This improvement was especially important because, before these fixes, the report submission endpoint could not be tested correctly due to backend and database-related errors. After the fixes, it became one of the strongest-performing scenarios in the whole test suite.
+
+7. Before/After Comparison
+
+Before fixing the backend and database issues, the report submission endpoint could not be used reliably for load testing. The write path experienced failures caused by schema inconsistencies, missing reference data, and database-related issues. Because of that, the write-heavy and mixed scenarios were not initially valid for performance evaluation.
+
+After applying the required fixes, the write-heavy scenario completed successfully with:
+- Average response time: 3.79 ms
+- p95 latency: 9.03 ms
+- Throughput: 4.98 req/s
+- Error rate: 0%
+
+This shows a clear improvement in system readiness and write-path stability.
+
+However, even after the fixes, the read-oriented scenarios remained problematic. The read-heavy scenario still showed 91.66% failure rate, the spike test showed 84.75%, the soak test showed 63.66%, and the mixed workload showed 41.66% overall error rate because of read failures. This means that the remaining performance problem is mainly in read scalability and stability, not in write performance.
+
+8. Identified Bottlenecks
+
+Based on the testing results, the main bottlenecks are:
+- The incident listing read endpoint under concurrent traffic
+- Read requests during mixed workload execution
+- The system’s ability to absorb sudden spikes in traffic
+- The system’s long-term stability under sustained load
+- Possible rate limiting or throttling, as shown by repeated 429 Too many requests responses during read-related execution
+
+9. Conclusion
+
+The k6 performance evaluation showed that the system behaves differently depending on the type of workload.
+
+The write-heavy workload was the most stable scenario, with very low latency and 0% error rate. In contrast, the read-heavy, spike, and soak tests showed that the system struggles under read-dominant traffic, even though successful requests are still processed quickly. The mixed workload confirmed the same pattern: writes were stable, but reads caused a significant portion of the failures.
+
+Overall, the system demonstrates good raw response speed, but its main weakness is stability under high or sustained read load. Future optimization efforts should therefore focus on improving read-side handling, reducing request failures, and reviewing rate limiting or backend bottlenecks affecting the incident listing functionality.
