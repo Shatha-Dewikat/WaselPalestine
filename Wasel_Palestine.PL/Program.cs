@@ -118,8 +118,8 @@ namespace Wasel_Palestine.PL
 
             builder.Services.AddHttpContextAccessor();
 
-           
-           
+        
+
             builder.Services.AddScoped<MobilityService>();
             builder.Services.AddScoped<ReportingService>();
 

@@ -25,17 +25,19 @@ namespace Wasel_Palestine.BLL.Service
         {
             try
             {
-                
+                var geometryFactory = NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
+
                 var location = new DAL.Model.Location
                 {
                     Latitude = request.Latitude,
                     Longitude = request.Longitude,
+                    Coordinates = geometryFactory.CreatePoint(new Coordinate((double)request.Longitude, (double)request.Latitude)),
                     AreaName = request.AreaName,
                     City = request.City,
                     CreatedAt = DateTime.UtcNow
                 };
 
-               
+
                 var checkpoint = new Checkpoint
                 {
                     NameEn = request.NameEn,
@@ -79,7 +81,9 @@ namespace Wasel_Palestine.BLL.Service
                     Message = "Checkpoint created successfully",
                     Id = checkpoint.Id,
                     Name = checkpoint.NameEn,
+                    Description = checkpoint.DescriptionEn,
                     Status = checkpoint.CurrentStatus,
+                    EstimatedDelayMinutes = checkpoint.EstimatedDelayMinutes != null ? checkpoint.EstimatedDelayMinutes : null,
                     CreatedAt = checkpoint.CreatedAt
                 };
             }
@@ -375,10 +379,26 @@ namespace Wasel_Palestine.BLL.Service
             var checkpoints = await _repository.GetAllCheckpointsAsync();
 
             if (!string.IsNullOrEmpty(filter.Status))
-                checkpoints = checkpoints.Where(c => c.CurrentStatus == filter.Status).ToList();
+            {
+                checkpoints = checkpoints.Where(c =>
+                    c.CurrentStatus != null &&
+                    c.CurrentStatus.Equals(filter.Status, StringComparison.OrdinalIgnoreCase)
+                ).ToList();
+            }
 
             if (filter.LocationId.HasValue)
+            {
                 checkpoints = checkpoints.Where(c => c.LocationId == filter.LocationId.Value).ToList();
+            }
+
+            if (!string.IsNullOrEmpty(filter.City))
+            {
+                checkpoints = checkpoints.Where(c =>
+                    c.Location != null &&
+                    c.Location.City != null &&
+                    c.Location.City.Contains(filter.City, StringComparison.OrdinalIgnoreCase)
+                ).ToList();
+            }
 
             return checkpoints.Select(c => new CheckpointResponse
             {
@@ -409,6 +429,51 @@ namespace Wasel_Palestine.BLL.Service
             }).ToList();
         }
 
+        public async Task<bool> ProcessConfirmedReportAsync(int checkpointId, string newStatus, string userId, string ip, string userAgent)
+        {
+            try
+            {
+                var checkpoint = await _repository.GetCheckpointByIdAsync(checkpointId);
+                if (checkpoint == null) return false;
+
+                var oldStatus = checkpoint.CurrentStatus;
+                if (oldStatus.Equals(newStatus, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                var statusExists = await _repository.CheckpointStatusExistsAsync(newStatus);
+                if (!statusExists) return false;
+
+                checkpoint.CurrentStatus = newStatus;
+                await _repository.UpdateCheckpointAsync(checkpoint);
+
+                await _repository.AddStatusHistoryAsync(new CheckpointStatusHistory
+                {
+                    CheckpointId = checkpoint.Id,
+                    OldStatus = oldStatus,
+                    NewStatus = newStatus,
+                    ChangedAt = DateTime.UtcNow,
+                    ChangedByUserId = userId 
+                });
+
+                await _repository.AddAuditLogAsync(new AuditLog
+                {
+                    UserId = userId,
+                    Action = "STATUS_UPDATE_BY_REPORT",
+                    EntityName = "Checkpoint",
+                    EntityId = checkpoint.Id,
+                    Timestamp = DateTime.UtcNow,
+                    Details = $"Status updated automatically from {oldStatus} to {newStatus} via confirmed report.",
+                    IPAddress = ip,
+                    UserAgent = userAgent
+                });
+
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
         public async Task<List<CheckpointHistoryResponse>> GetCheckpointHistoryAsync(int checkpointId)
         {
             var history = await _repository.GetCheckpointHistoryAsync(checkpointId);

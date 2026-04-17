@@ -16,13 +16,16 @@ namespace Wasel_Palestine.BAL.Service
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly ICheckpointService _checkpointService;
         private readonly IAlertService _alertService;
         private readonly IMemoryCache _cache;
 
-        public ReportingService(ApplicationDbContext context, IWebHostEnvironment environment, IAlertService alertService, IMemoryCache cache)
+
+        public ReportingService(ApplicationDbContext context, IWebHostEnvironment environment, ICheckpointService checkpointService, IAlertService alertService, IMemoryCache cache)
         {
             _context = context;
             _environment = environment;
+            _checkpointService = checkpointService;
             _alertService = alertService;
             _cache = cache;
         }
@@ -64,37 +67,17 @@ namespace Wasel_Palestine.BAL.Service
 
 
             if (existingDuplicate != null)
-
             {
-
                 if (existingDuplicate.UserId == reportDto.UserId)
-
                     return "You have already reported this incident.";
 
-
-
                 existingDuplicate.ConfidenceScore = isStaff ? staffScore : Math.Min(1.0f, existingDuplicate.ConfidenceScore + confirmationIncrement);
-
                 existingDuplicate.CreatedAt = DateTime.UtcNow;
 
-
-
-                if (existingDuplicate.ConfidenceScore >= 1.0f)
-
-                {
-
-                    var alreadyHasIncident = await _context.Incidents.AnyAsync(i => i.LocationId == existingDuplicate.LocationId && i.CreatedAt >= thresholdTime);
-
-                    if (!alreadyHasIncident) await CreateIncidentFromReportAsync(existingDuplicate);
-
-                }
-
-
+                await CheckConfidenceAndTriggerAlertAsync(existingDuplicate);
 
                 await _context.SaveChangesAsync();
-
                 return "Thank you! Your confirmation has been added.";
-
             }
 
 
@@ -429,7 +412,71 @@ namespace Wasel_Palestine.BAL.Service
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
         }
+        private async Task CheckConfidenceAndTriggerAlertAsync(Report report)
+        {
+            if (report.ConfidenceScore >= 1.0f)
+            {
+                var thresholdTime = DateTime.UtcNow.AddHours(-2);
 
+                var alreadyHasIncident = await _context.Incidents
+                    .AnyAsync(i => i.LocationId == report.LocationId &&
+                                   i.CategoryId == report.CategoryId &&
+                                   i.CreatedAt >= thresholdTime);
+
+
+                if (!alreadyHasIncident)
+                {
+                    await CreateIncidentFromReportAsync(report);
+                }
+
+                if (report.CheckpointId.HasValue)
+                {
+                    string autoStatus = GetStatusNameByCategoryId(report.CategoryId);
+
+                    await _checkpointService.ProcessConfirmedReportAsync(
+                        report.CheckpointId.Value,
+                        autoStatus,
+                        "SYSTEM_AUTO_CONFIRM", 
+                        "127.0.0.1",
+                        "Confidence-Algorithm"
+                    );
+                }
+            }
+        }
+        private string GetStatusNameByCategoryId(int categoryId)
+        {
+            return categoryId switch
+            {
+                4 => "Open",
+                5 => "Closed",
+                6 => "Partially Closed",
+                7 => "Busy",
+                _ => "Open" 
+            };
+        }
+        public async Task ConfirmReportAsync(int reportId, string adminUserId)
+        {
+            var report = await _context.Reports.FirstOrDefaultAsync(r => r.Id == reportId);
+            if (report == null) return;
+
+            report.StatusId = 2; 
+
+            if (report.CheckpointId.HasValue)
+            {
+                string dynamicStatus = GetStatusNameByCategoryId(report.CategoryId);
+
+                await _checkpointService.ProcessConfirmedReportAsync(
+                    report.CheckpointId.Value,
+                    dynamicStatus, 
+                    adminUserId,
+                    "Internal-System",
+                    "Server-Side"
+                );
+            }
+
+        
+        await _context.SaveChangesAsync();
+        }
         public async Task<bool> MarkAlertAsReadAsync(int alertId, string userId)
         {
             var recipient = await _context.AlertRecipients
