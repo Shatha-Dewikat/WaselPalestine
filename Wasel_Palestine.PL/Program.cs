@@ -87,7 +87,7 @@ namespace Wasel_Palestine.PL
                         httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
                         _ => new FixedWindowRateLimiterOptions
                         {
-                            PermitLimit = 100,
+                            PermitLimit = 10000,   
                             Window = TimeSpan.FromMinutes(1)
                         }));
 
@@ -96,7 +96,7 @@ namespace Wasel_Palestine.PL
                         httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
                         _ => new FixedWindowRateLimiterOptions
                         {
-                            PermitLimit = 5,
+                            PermitLimit = 500,    
                             Window = TimeSpan.FromMinutes(1)
                         }));
             });
