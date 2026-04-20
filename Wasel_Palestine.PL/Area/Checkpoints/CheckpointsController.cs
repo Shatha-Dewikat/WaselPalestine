@@ -30,7 +30,14 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
             try
             {
                 var result = await _service.CreateCheckpointAsync(request, CurrentUserId, ip, userAgent);
-                return Ok(new { success = true, message = "Checkpoint created successfully.", data = result });
+
+                if (!result.Success)
+                {
+                    
+                    return BadRequest(result);
+                }
+
+                return Ok(result);
             }
             catch (System.Exception ex)
             {
@@ -46,6 +53,11 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
             try
             {
                 var result = await _service.UpdateCheckpointAsync(id, request, CurrentUserId, ip, userAgent);
+                if (!result.Success)
+                {
+
+                    return BadRequest(result);
+                }
                 return Ok(new { success = true, message = "Checkpoint updated successfully.", data = result });
             }
             catch (System.Exception ex)
@@ -79,6 +91,11 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
             try
             {
                 var result = await _service.RestoreCheckpointAsync(id, CurrentUserId, ip, userAgent);
+                if (!result.Success)
+                {
+
+                    return BadRequest(result);
+                }
                 return Ok(new { success = true, message = "Checkpoint restored successfully.", data = result });
             }
             catch (System.Exception ex)
@@ -96,6 +113,11 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
             try
             {
                 var result = await _service.ChangeStatusAsync(id, request, CurrentUserId, ip, userAgent);
+                if (!result.Success)
+                {
+
+                    return BadRequest(result);
+                }
                 return Ok(new { success = true, message = "Checkpoint status changed successfully.", data = result });
             }
             catch (System.Exception ex)
@@ -130,6 +152,7 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
             try
             {
                 var result = await _service.GetAllCheckpointsAsync(lang);
+              
                 return Ok(new { success = true, message = "All checkpoints retrieved successfully.", data = result });
             }
             catch (System.Exception ex)
@@ -146,6 +169,8 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
             try
             {
                 var result = await _service.GetFilteredCheckpointsAsync(filter, lang);
+
+
                 return Ok(new { success = true, message = "Filtered checkpoints retrieved successfully.", data = result });
             }
             catch (System.Exception ex)
@@ -181,6 +206,7 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
             try
             {
                 var result = await _service.GetCheckpointHistoryAsync(id);
+
                 return Ok(new { success = true, message = "Checkpoint history retrieved successfully.", data = result });
             }
             catch (System.Exception ex)
@@ -196,6 +222,7 @@ namespace Wasel_Palestine.PL.Area.Checkpoints
             try
             {
                 var result = await _service.GetNearbyCheckpointsAsync(lat, lon, radius, lang);
+
                 return Ok(new { success = true, data = result });
             }
             catch (Exception ex)

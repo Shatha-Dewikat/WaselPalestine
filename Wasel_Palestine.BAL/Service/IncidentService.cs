@@ -405,9 +405,9 @@ namespace Wasel_Palestine.BLL.Service
 
             string severityName = rule.Value.SeverityId switch
             {
-                1 => "Low",
-                2 => "Medium",
-                3 => "High",
+                5 => "Low",
+                6 => "Medium",
+                7 => "High",
                 _ => "Low"
             };
 

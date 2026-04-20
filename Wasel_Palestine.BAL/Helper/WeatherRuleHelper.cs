@@ -13,19 +13,19 @@ namespace Wasel_Palestine.BLL.Helper
             return lowerCondition switch
             {
                 var c when c.Contains("clear") || c.Contains("cloudy")
-                    => ("Test Weather", "هذا بلاغ تجريبي للتأكد من عمل النظام في الجو الصافي أو الغائم جزئياً", 1),
+                    => ("Test Weather", "هذا بلاغ تجريبي للتأكد من عمل النظام في الجو الصافي أو الغائم جزئياً", 5),
 
                 var c when c.Contains("fog") || c.Contains("mist")
-                    => ("Low Visibility", "تحذير: رؤية منخفضة بسبب الضباب في هذه المنطقة", 2),
+                    => ("Low Visibility", "تحذير: رؤية منخفضة بسبب الضباب في هذه المنطقة", 6),
 
                 var c when c.Contains("rain") || c.Contains("drizzle")
-                    => ("Slippery Roads", "تحذير: طرق منزلقة بسبب الأمطار", 2),
+                    => ("Slippery Roads", "تحذير: طرق منزلقة بسبب الأمطار", 6),
 
                 var c when c.Contains("snow")
-                    => ("Snow Hazard", "خطر: تراكم ثلوج قد يؤدي لإغلاق طرق", 3),
+                    => ("Snow Hazard", "خطر: تراكم ثلوج قد يؤدي لإغلاق طرق", 7),
 
                 var c when c.Contains("thunderstorm")
-                    => ("Severe Weather", "خطر: عواصف رعدية وظروف جوية قاسية", 3),
+                    => ("Severe Weather", "خطر: عواصف رعدية وظروف جوية قاسية", 7  ),
 
                 _ => null
             };

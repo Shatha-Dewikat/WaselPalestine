@@ -25,6 +25,30 @@ namespace Wasel_Palestine.BLL.Service
         {
             try
             {
+                var allCheckpoints = await _repository.GetAllCheckpointsAsync();
+
+                var isDuplicate = allCheckpoints.Any(c =>
+                    c.DeletedAt == null && 
+                    (
+                        ((c.NameEn.Equals(request.NameEn, StringComparison.OrdinalIgnoreCase) ||
+                          c.NameAr.Equals(request.NameAr, StringComparison.OrdinalIgnoreCase))
+                          && c.Location.City.Equals(request.City, StringComparison.OrdinalIgnoreCase))
+                        ||
+                        (Math.Abs(c.Location.Latitude - request.Latitude) < 0.0001m &&
+                         Math.Abs(c.Location.Longitude - request.Longitude) < 0.0001m))
+                    
+                );
+
+                if (isDuplicate)
+                {
+                    return new CheckpointResponse
+                    {
+                        Success = false,
+                        Message = "هذا الحاجز موجود بالفعل في قاعدة البيانات بنفس الاسم أو الموقع.",
+                        Errors = new List<string> { "Duplicate checkpoint detected: Name or Location already exists." }
+                    };
+                }
+
                 var geometryFactory = NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
 
                 var location = new DAL.Model.Location
@@ -36,7 +60,6 @@ namespace Wasel_Palestine.BLL.Service
                     City = request.City,
                     CreatedAt = DateTime.UtcNow
                 };
-
 
                 var checkpoint = new Checkpoint
                 {
@@ -50,10 +73,8 @@ namespace Wasel_Palestine.BLL.Service
                     CreatedAt = DateTime.UtcNow
                 };
 
-              
                 await _repository.CreateCheckpointAsync(checkpoint);
 
-               
                 await _repository.AddStatusHistoryAsync(new CheckpointStatusHistory
                 {
                     CheckpointId = checkpoint.Id,
@@ -70,7 +91,7 @@ namespace Wasel_Palestine.BLL.Service
                     EntityName = "Checkpoint",
                     EntityId = checkpoint.Id,
                     Timestamp = DateTime.UtcNow,
-                    Details = $"Checkpoint created: {checkpoint.NameEn}",
+                    Details = $"Checkpoint created: {checkpoint.NameEn} in {request.City}",
                     IPAddress = ip,
                     UserAgent = userAgent
                 });
@@ -83,7 +104,7 @@ namespace Wasel_Palestine.BLL.Service
                     Name = checkpoint.NameEn,
                     Description = checkpoint.DescriptionEn,
                     Status = checkpoint.CurrentStatus,
-                    EstimatedDelayMinutes = checkpoint.EstimatedDelayMinutes != null ? checkpoint.EstimatedDelayMinutes : null,
+                    EstimatedDelayMinutes = checkpoint.EstimatedDelayMinutes,
                     CreatedAt = checkpoint.CreatedAt
                 };
             }

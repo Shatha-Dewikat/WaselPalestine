@@ -21,11 +21,15 @@ namespace Wasel_Palestine.PL.Area.Auth
         [HttpPost("Register")]
         public async Task<IActionResult> Register(DAL.DTO.Request.RegisterRequest request)
         {
-
             var result = await authenticationService.RegisterAsync(request);
+
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
             return Ok(result);
         }
-
 
 
 
