@@ -56,33 +56,7 @@ namespace Wasel_Palestine.PL.Area.Controllers
         }
 
       
-        [HttpGet("estimate-route")]
-        public async Task<IActionResult> GetRoute([FromQuery] double sLat, [FromQuery] double sLng, [FromQuery] double eLat, [FromQuery] double eLng)
-        {
-            try
-            {
-                var route = await _mobilityService.EstimateRouteAsync(sLat, sLng, eLat, eLng);
-                return Ok(route);
-            }
-            catch
-            {
-                return StatusCode(503, new { message = "Routing service unavailable" });
-            }
-        }
-
       
-        [HttpPost("submit-report")]
-        public async Task<IActionResult> PostReport([FromBody] CreateReportDto reportDto)
-        {
-            var result = await _reportingService.SubmitReportAsync(reportDto);
-
-            if (result.StartsWith("Success"))
-                return Ok(new { message = result });
-
-            return Conflict(new { message = result });
-        }
-
-       
         [HttpPost("dismiss-report/{id}")]
         public async Task<IActionResult> DismissReport(int id)
         {
@@ -103,15 +77,6 @@ namespace Wasel_Palestine.PL.Area.Controllers
         }
 
        
-        [HttpPost("subscribe-alert")]
-        public async Task<IActionResult> SubscribeAlert([FromBody] SubscribeAlertDto subscriptionDto)
-        {
-            var result = await _reportingService.SubscribeToAlertAsync(subscriptionDto);
-
-            if (result.StartsWith("Success"))
-                return Ok(new { message = result });
-
-            return BadRequest(new { message = result });
-        }
+      
     }
 }

@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection.Emit;
 using Wasel_Palestine.DAL.Model;
+
 
 namespace Wasel_Palestine.DAL.Data
 {
@@ -38,7 +38,7 @@ namespace Wasel_Palestine.DAL.Data
         public DbSet<CheckpointStatus> CheckpointStatuses { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options)
+          : base(options)
         {
         }
 
@@ -46,8 +46,8 @@ namespace Wasel_Palestine.DAL.Data
         {
             base.OnModelCreating(builder);
 
-            // Identity tables
-            builder.Entity<User>().ToTable("AspNetUsers");
+            // Identity tables
+            builder.Entity<User>().ToTable("AspNetUsers");
             builder.Entity<Role>().ToTable("AspNetRoles");
             builder.Entity<IdentityUserRole<string>>().ToTable("AspNetUserRoles");
             builder.Entity<IdentityUserClaim<string>>().ToTable("AspNetUserClaims");
@@ -55,8 +55,8 @@ namespace Wasel_Palestine.DAL.Data
             builder.Entity<IdentityUserLogin<string>>().ToTable("AspNetUserLogins");
             builder.Entity<IdentityUserToken<string>>().ToTable("AspNetUserTokens");
 
-            // Location
-            builder.Entity<Location>(entity =>
+            // Location
+            builder.Entity<Location>(entity =>
             {
                 entity.Property(e => e.Latitude).HasPrecision(9, 6).IsRequired();
                 entity.Property(e => e.Longitude).HasPrecision(9, 6).IsRequired();
@@ -65,8 +65,8 @@ namespace Wasel_Palestine.DAL.Data
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             });
 
-            // AuditLogs
-            builder.Entity<AuditLog>(entity =>
+            // AuditLogs
+            builder.Entity<AuditLog>(entity =>
             {
                 entity.HasKey(a => a.Id);
                 entity.Property(a => a.UserId).IsRequired(false);
@@ -78,209 +78,209 @@ namespace Wasel_Palestine.DAL.Data
                 entity.Property(a => a.Timestamp).HasDefaultValueSql("GETUTCDATE()").IsRequired();
             });
 
-            // IncidentHistory
-            builder.Entity<IncidentHistory>(entity =>
+            // IncidentHistory
+            builder.Entity<IncidentHistory>(entity =>
             {
                 entity.HasKey(ih => ih.Id);
                 entity.Property(ih => ih.Action).HasMaxLength(50).IsRequired();
                 entity.Property(ih => ih.Changes).HasMaxLength(500);
 
                 entity.HasOne(ih => ih.Incident)
-                      .WithMany(i => i.IncidentHistories)
-                      .HasForeignKey(ih => ih.IncidentId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                   .WithMany(i => i.IncidentHistories)
+                   .HasForeignKey(ih => ih.IncidentId)
+                   .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(ih => ih.Status)
-                      .WithMany(s => s.IncidentHistories)
-                      .HasForeignKey(ih => ih.StatusId)
-                      .OnDelete(DeleteBehavior.NoAction);
+                   .WithMany(s => s.IncidentHistories)
+                   .HasForeignKey(ih => ih.StatusId)
+                   .OnDelete(DeleteBehavior.NoAction);
             });
 
-            // UserRole composite key
-            builder.Entity<UserRole>()
-                .HasKey(ur => new { ur.UserId, ur.RoleId });
+            // UserRole composite key
+            builder.Entity<UserRole>()
+        .HasKey(ur => new { ur.UserId, ur.RoleId });
 
             builder.Entity<UserRole>()
-                .HasOne(ur => ur.User)
-                .WithMany(u => u.UserRoles)
-                .HasForeignKey(ur => ur.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+              .HasOne(ur => ur.User)
+              .WithMany(u => u.UserRoles)
+              .HasForeignKey(ur => ur.UserId)
+              .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<UserRole>()
-                .HasOne(ur => ur.Role)
-                .WithMany(r => r.UserRoles)
-                .HasForeignKey(ur => ur.RoleId)
-                .OnDelete(DeleteBehavior.Cascade);
+              .HasOne(ur => ur.Role)
+              .WithMany(r => r.UserRoles)
+              .HasForeignKey(ur => ur.RoleId)
+              .OnDelete(DeleteBehavior.Cascade);
 
-            // Incident relationships
-            builder.Entity<Incident>()
-                .HasOne(i => i.CreatedByUser)
-                .WithMany(u => u.CreatedIncidents)
-                .HasForeignKey(i => i.CreatedByUserId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            builder.Entity<Incident>()
-                .HasOne(i => i.VerifiedByUser)
-                .WithMany(u => u.VerifiedIncidents)
-                .HasForeignKey(i => i.VerifiedByUserId)
-                .OnDelete(DeleteBehavior.NoAction);
+            // Incident relationships
+            builder.Entity<Incident>()
+        .HasOne(i => i.CreatedByUser)
+        .WithMany(u => u.CreatedIncidents)
+        .HasForeignKey(i => i.CreatedByUserId)
+        .OnDelete(DeleteBehavior.NoAction);
 
             builder.Entity<Incident>()
-                .HasOne(i => i.ClosedByUser)
-                .WithMany(u => u.ClosedIncidents)
-                .HasForeignKey(i => i.ClosedByUserId)
-                .OnDelete(DeleteBehavior.NoAction);
+              .HasOne(i => i.VerifiedByUser)
+              .WithMany(u => u.VerifiedIncidents)
+              .HasForeignKey(i => i.VerifiedByUserId)
+              .OnDelete(DeleteBehavior.NoAction);
 
-            // Incident Media
-            builder.Entity<IncidentMedia>()
-                .HasOne(im => im.Incident)
-                .WithMany(i => i.IncidentMedia)
-                .HasForeignKey(im => im.IncidentId)
-                .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<Incident>()
+              .HasOne(i => i.ClosedByUser)
+              .WithMany(u => u.ClosedIncidents)
+              .HasForeignKey(i => i.ClosedByUserId)
+              .OnDelete(DeleteBehavior.NoAction);
 
-            // Reports
+            // Incident Media
+            builder.Entity<IncidentMedia>()
+        .HasOne(im => im.Incident)
+        .WithMany(i => i.IncidentMedia)
+        .HasForeignKey(im => im.IncidentId)
+        .OnDelete(DeleteBehavior.Cascade);
+
+            // Reports
+            builder.Entity<ReportMedia>()
+        .HasOne(rm => rm.User)
+        .WithMany(u => u.ReportMedias)
+        .HasForeignKey(rm => rm.UserId)
+        .OnDelete(DeleteBehavior.NoAction);
+
             builder.Entity<ReportMedia>()
-                .HasOne(rm => rm.User)
-                .WithMany(u => u.ReportMedias)
-                .HasForeignKey(rm => rm.UserId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            builder.Entity<ReportMedia>()
-                .HasOne(rm => rm.Report)
-                .WithMany(r => r.ReportMedias)
-                .HasForeignKey(rm => rm.ReportId)
-                .OnDelete(DeleteBehavior.Cascade);
+              .HasOne(rm => rm.Report)
+              .WithMany(r => r.ReportMedias)
+              .HasForeignKey(rm => rm.ReportId)
+              .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<ReportVote>()
-                .HasOne(rv => rv.User)
-                .WithMany(u => u.ReportVotes)
-                .HasForeignKey(rv => rv.UserId)
-                .OnDelete(DeleteBehavior.NoAction);
+              .HasOne(rv => rv.User)
+              .WithMany(u => u.ReportVotes)
+              .HasForeignKey(rv => rv.UserId)
+              .OnDelete(DeleteBehavior.NoAction);
 
             builder.Entity<ReportVote>()
-                .HasOne(rv => rv.Report)
-                .WithMany(r => r.ReportVotes)
-                .HasForeignKey(rv => rv.ReportId)
-                .OnDelete(DeleteBehavior.Cascade);
+              .HasOne(rv => rv.Report)
+              .WithMany(r => r.ReportVotes)
+              .HasForeignKey(rv => rv.ReportId)
+              .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<ReportModerationAction>()
-                .HasOne(rm => rm.Moderator)
-                .WithMany(u => u.ReportModerationActions)
-                .HasForeignKey(rm => rm.ModeratorId)
-                .OnDelete(DeleteBehavior.NoAction);
+              .HasOne(rm => rm.Moderator)
+              .WithMany(u => u.ReportModerationActions)
+              .HasForeignKey(rm => rm.ModeratorId)
+              .OnDelete(DeleteBehavior.NoAction);
 
             builder.Entity<ReportModerationAction>()
-                .HasOne(rm => rm.Report)
-                .WithMany(r => r.ReportModerationActions)
-                .HasForeignKey(rm => rm.ReportId)
-                .OnDelete(DeleteBehavior.Cascade);
+              .HasOne(rm => rm.Report)
+              .WithMany(r => r.ReportModerationActions)
+              .HasForeignKey(rm => rm.ReportId)
+              .OnDelete(DeleteBehavior.Cascade);
 
-            // Checkpoints
-            builder.Entity<Checkpoint>()
-                .HasOne(c => c.Location)
-                .WithMany(l => l.Checkpoints)
-                .HasForeignKey(c => c.LocationId)
-                .OnDelete(DeleteBehavior.NoAction);
+            // Checkpoints
+            builder.Entity<Checkpoint>()
+        .HasOne(c => c.Location)
+        .WithMany(l => l.Checkpoints)
+        .HasForeignKey(c => c.LocationId)
+        .OnDelete(DeleteBehavior.NoAction);
 
             builder.Entity<Checkpoint>()
-                .HasMany(c => c.StatusHistories)
-                .WithOne(csh => csh.Checkpoint)
-                .HasForeignKey(csh => csh.CheckpointId)
-                .OnDelete(DeleteBehavior.Cascade);
+              .HasMany(c => c.StatusHistories)
+              .WithOne(csh => csh.Checkpoint)
+              .HasForeignKey(csh => csh.CheckpointId)
+              .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<CheckpointStatusHistory>()
-                .HasOne(csh => csh.ChangedByUser)
-                .WithMany(u => u.CheckpointStatusHistories)
-                .HasForeignKey(csh => csh.ChangedByUserId)
-                .OnDelete(DeleteBehavior.NoAction);
+              .HasOne(csh => csh.ChangedByUser)
+              .WithMany(u => u.CheckpointStatusHistories)
+              .HasForeignKey(csh => csh.ChangedByUserId)
+              .OnDelete(DeleteBehavior.NoAction);
 
-            // Alerts
-            builder.Entity<AlertRecipient>()
-                .HasOne(ar => ar.User)
-                .WithMany(u => u.AlertRecipients)
-                .HasForeignKey(ar => ar.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // Alerts
+            builder.Entity<AlertRecipient>()
+        .HasOne(ar => ar.User)
+        .WithMany(u => u.AlertRecipients)
+        .HasForeignKey(ar => ar.UserId)
+        .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<AlertRecipient>()
-                .HasOne(ar => ar.Alert)
-                .WithMany(a => a.Recipients)
-                .HasForeignKey(ar => ar.AlertId)
-                .OnDelete(DeleteBehavior.Cascade);
+              .HasOne(ar => ar.Alert)
+              .WithMany(a => a.Recipients)
+              .HasForeignKey(ar => ar.AlertId)
+              .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<AlertHistory>()
-                .HasOne(ah => ah.Alert)
-                .WithMany(a => a.AlertHistories)
-                .HasForeignKey(ah => ah.AlertId)
-                .OnDelete(DeleteBehavior.Cascade);
+              .HasOne(ah => ah.Alert)
+              .WithMany(a => a.AlertHistories)
+              .HasForeignKey(ah => ah.AlertId)
+              .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<AlertSubscription>()
-                .HasOne(asub => asub.User)
-                .WithMany(u => u.AlertSubscriptions)
-                .HasForeignKey(asub => asub.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+              .HasOne(asub => asub.User)
+              .WithMany(u => u.AlertSubscriptions)
+              .HasForeignKey(asub => asub.UserId)
+              .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<AlertSubscription>()
-                .HasOne(asub => asub.Location)
-                .WithMany()
-                .HasForeignKey(asub => asub.LocationId)
-                .OnDelete(DeleteBehavior.Cascade);
+              .HasOne(asub => asub.Location)
+              .WithMany()
+              .HasForeignKey(asub => asub.LocationId)
+              .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<AlertSubscription>()
-                .HasOne(asub => asub.Category)
-                .WithMany(c => c.AlertSubscriptions)
-                .HasForeignKey(asub => asub.CategoryId)
-                .OnDelete(DeleteBehavior.Cascade);
+              .HasOne(asub => asub.Category)
+              .WithMany(c => c.AlertSubscriptions)
+              .HasForeignKey(asub => asub.CategoryId)
+              .OnDelete(DeleteBehavior.Cascade);
 
-            // RouteRequests
-            builder.Entity<RouteRequest>()
-                .HasOne(rr => rr.User)
-                .WithMany(u => u.RouteRequests)
-                .HasForeignKey(rr => rr.UserId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            builder.Entity<RouteRequest>()
-                .HasOne(rr => rr.FromLocation)
-                .WithMany(l => l.FromRouteRequests)
-                .HasForeignKey(rr => rr.FromLocationId)
-                .OnDelete(DeleteBehavior.NoAction);
+            // RouteRequests
+            builder.Entity<RouteRequest>()
+        .HasOne(rr => rr.User)
+        .WithMany(u => u.RouteRequests)
+        .HasForeignKey(rr => rr.UserId)
+        .OnDelete(DeleteBehavior.SetNull);
 
             builder.Entity<RouteRequest>()
-                .HasOne(rr => rr.ToLocation)
-                .WithMany(l => l.ToRouteRequests)
-                .HasForeignKey(rr => rr.ToLocationId)
-                .OnDelete(DeleteBehavior.NoAction);
+              .HasOne(rr => rr.FromLocation)
+              .WithMany(l => l.FromRouteRequests)
+              .HasForeignKey(rr => rr.FromLocationId)
+              .OnDelete(DeleteBehavior.NoAction);
 
-            // RefreshTokens
-            builder.Entity<RefreshToken>()
-                .HasOne(rt => rt.User)
-                .WithMany(u => u.RefreshTokens)
-                .HasForeignKey(rt => rt.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<RouteRequest>()
+              .HasOne(rr => rr.ToLocation)
+              .WithMany(l => l.ToRouteRequests)
+              .HasForeignKey(rr => rr.ToLocationId)
+              .OnDelete(DeleteBehavior.NoAction);
 
-            // Incident Categories, Severities, Statuses
-            builder.Entity<Incident>()
-                .HasOne(i => i.Category)
-                .WithMany()
-                .HasForeignKey(i => i.CategoryId)
-                .OnDelete(DeleteBehavior.NoAction);
+            // RefreshTokens
+            builder.Entity<RefreshToken>()
+        .HasOne(rt => rt.User)
+        .WithMany(u => u.RefreshTokens)
+        .HasForeignKey(rt => rt.UserId)
+        .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<Incident>()
-                .HasOne(i => i.Severity)
-                .WithMany()
-                .HasForeignKey(i => i.SeverityId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            builder.Entity<Incident>()
-                .HasOne(i => i.Status)
-                .WithMany()
-                .HasForeignKey(i => i.StatusId)
-                .OnDelete(DeleteBehavior.NoAction);
+            // Incident Categories, Severities, Statuses
+            builder.Entity<Incident>()
+        .HasOne(i => i.Category)
+        .WithMany()
+        .HasForeignKey(i => i.CategoryId)
+        .OnDelete(DeleteBehavior.NoAction);
 
             builder.Entity<Incident>()
-    .HasOne(i => i.RelatedCheckpoint) 
-    .WithMany(c => c.RelatedIncidents) 
-    .HasForeignKey(i => i.RelatedCheckpointId)
-    .OnDelete(DeleteBehavior.SetNull);
+              .HasOne(i => i.Severity)
+              .WithMany()
+              .HasForeignKey(i => i.SeverityId)
+              .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<Incident>()
+              .HasOne(i => i.Status)
+              .WithMany()
+              .HasForeignKey(i => i.StatusId)
+              .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<Incident>()
+        .HasOne(i => i.RelatedCheckpoint)
+        .WithMany(c => c.RelatedIncidents)
+        .HasForeignKey(i => i.RelatedCheckpointId)
+        .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

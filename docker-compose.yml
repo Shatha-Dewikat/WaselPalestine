@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "StrongPass!123"
+    ports:
+      - "1433:1433"
+    networks:
+      - waselnet
+
+  api:
+    image: waselpalestinepl:latest
+    container_name: wasel_api
+    depends_on:
+      - sqlserver
+    ports:
+      - "8080:80"
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=WaselPalestineDB;User Id=sa;Password=StrongPass!123;TrustServerCertificate=True;"
+    networks:
+      - waselnet
+
+networks:
+  waselnet:

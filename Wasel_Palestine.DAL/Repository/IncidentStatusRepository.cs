@@ -19,7 +19,7 @@ namespace Wasel_Palestine.DAL.Repository
         public async Task<IncidentStatus> AddAsync(IncidentStatus status)
         {
             await _context.IncidentStatuses.AddAsync(status);
-           
+            await _context.SaveChangesAsync();
             return status;
         }
 

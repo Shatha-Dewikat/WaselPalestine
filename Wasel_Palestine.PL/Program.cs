@@ -1,19 +1,21 @@
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Wasel_Palestine.BAL.Service;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+
+using Microsoft.AspNetCore.OpenApi;
 using System.Text;
+using System.Threading.RateLimiting;
+using Wasel_Palestine.BAL.Service;
 using Wasel_Palestine.BAL.MapsterConfigration;
 using Wasel_Palestine.BAL.Service;
 using Wasel_Palestine.DAL.Data;
 using Wasel_Palestine.DAL.Model;
 using Wasel_Palestine.DAL.Repository;
 using Wasel_Palestine.DAL.Utils;
-using Microsoft.AspNetCore.RateLimiting;
-using System.Threading.RateLimiting;
-using Swashbuckle.AspNetCore.SwaggerGen;
+using Microsoft.OpenApi;
+
 
 
 namespace Wasel_Palestine.PL
@@ -24,7 +26,7 @@ namespace Wasel_Palestine.PL
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddMemoryCache();
-
+            builder.Services.AddResponseCompression();
             // DbContext
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(
@@ -85,7 +87,7 @@ namespace Wasel_Palestine.PL
                         httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
                         _ => new FixedWindowRateLimiterOptions
                         {
-                            PermitLimit = 100,
+                            PermitLimit = 10000,   
                             Window = TimeSpan.FromMinutes(1)
                         }));
 
@@ -94,7 +96,7 @@ namespace Wasel_Palestine.PL
                         httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
                         _ => new FixedWindowRateLimiterOptions
                         {
-                            PermitLimit = 5,
+                            PermitLimit = 500,    
                             Window = TimeSpan.FromMinutes(1)
                         }));
             });
@@ -116,8 +118,8 @@ namespace Wasel_Palestine.PL
 
             builder.Services.AddHttpContextAccessor();
 
-           
-           
+        
+
             builder.Services.AddScoped<MobilityService>();
             builder.Services.AddScoped<ReportingService>();
 
@@ -156,29 +158,74 @@ namespace Wasel_Palestine.PL
             builder.Services.AddScoped<ISeedData, UserSeedData>();
             builder.Services.AddScoped<ISeedData, ReportStatusSeedData>();
 
+
             // Utils
             builder.Services.AddScoped<AuditLogger>();
             builder.Services.AddMapster();
-            builder.Services.AddOpenApi();
+          //  builder.Services.AddOpenApi();
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+
+            //builder.Services.AddSwaggerGen();
+
+            builder.Services.AddAuthorization();
+
+            // New Security API for Swashbuckle 10.x
+            builder.Services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "My Web API",
+                    Version = "v1"
+                });
+
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme 
+                {
+                    Name = "Authorization", 
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer", 
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "Please enter token without Bearer"
+                });
+
+                options.AddSecurityRequirement(document =>
+                    new OpenApiSecurityRequirement
+                    {
+                       
+                        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+                    });
+            });
 
             MapsterConfig.RegisterMappings();
 
             var app = builder.Build();
+            app.UseSwagger(options =>
+            {
+                options.OpenApiVersion = OpenApiSpecVersion.OpenApi3_1;
+            });
+
+
 
             app.UseRateLimiter();
             app.UseStaticFiles();
-            app.UseAuthentication();
+            app.UseAuthentication(); 
             app.UseAuthorization();
 
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var context = services.GetRequiredService<ApplicationDbContext>();
+               context.Database.Migrate(); 
+              //  context.Database.EnsureCreated();
+            }
             if (app.Environment.IsDevelopment())
             {
-                app.MapOpenApi();
+               // app.MapOpenApi();
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
+            app.UseResponseCompression();
             app.MapControllers();
             app.Run();
         }

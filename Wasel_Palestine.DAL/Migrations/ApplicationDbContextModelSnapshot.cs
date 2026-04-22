@@ -143,6 +143,12 @@ namespace Wasel_Palestine.DAL.Migrations
                     b.Property<int>("IncidentId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IncidentId");
@@ -810,7 +816,6 @@ namespace Wasel_Palestine.DAL.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("DuplicateOfReportId")
@@ -852,16 +857,18 @@ namespace Wasel_Palestine.DAL.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("MediaType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MediaUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("ReportId")
                         .HasColumnType("int");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("VoteType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
