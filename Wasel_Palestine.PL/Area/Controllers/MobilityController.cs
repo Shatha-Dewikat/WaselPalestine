@@ -58,6 +58,7 @@ namespace Wasel_Palestine.PL.Area.Controllers
       
       
         [HttpPost("dismiss-report/{id}")]
+      
         public async Task<IActionResult> DismissReport(int id)
         {
             var result = await _reportingService.DismissReportAsync(id);
@@ -70,6 +71,7 @@ namespace Wasel_Palestine.PL.Area.Controllers
 
      
         [HttpGet("active-reports")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> GetActiveReports()
         {
             var reports = await _reportingService.GetActiveReportsAsync();

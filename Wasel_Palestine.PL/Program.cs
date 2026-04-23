@@ -41,6 +41,8 @@ namespace Wasel_Palestine.PL
                 options.Lockout.MaxFailedAccessAttempts = 5;
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(10);
             })
+
+
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
@@ -136,6 +138,7 @@ namespace Wasel_Palestine.PL
             builder.Services.AddScoped<IFileService, FileService>();
             builder.Services.AddScoped<ICheckpointService, CheckpointService>();
             builder.Services.AddHttpClient<IWeatherService, WeatherService>();
+            builder.Services.AddScoped<WeatherService>();
             builder.Services.AddHostedService<WeatherBackgroundService>();
             builder.Services.AddScoped<IAlertService, AlertService>();
 
@@ -225,6 +228,12 @@ namespace Wasel_Palestine.PL
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            app.UseSwaggerUI(c =>
+            {
+                
+                c.SwaggerEndpoint("v1/swagger.json", "Wasel_Palestine.PL v1");
+            });
             app.UseResponseCompression();
             app.MapControllers();
             app.Run();

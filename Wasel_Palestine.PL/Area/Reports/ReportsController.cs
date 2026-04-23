@@ -52,6 +52,7 @@ namespace Wasel_Palestine.PL.Area.Reports
         }
 
         [HttpGet("dashboard-stats")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> GetDashboardStats()
         {
             var stats = await _incidentService.GetDashboardStatsAsync();
@@ -59,6 +60,7 @@ namespace Wasel_Palestine.PL.Area.Reports
         }
 
         [HttpGet("heatmap")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> GetHeatmap([FromQuery] DateTime? fromDate)
         {
             var heatmapData = await _incidentService.GetIncidentHeatmapAsync(fromDate);

@@ -83,23 +83,36 @@ public async Task<IActionResult> UnlockUser(string userId)
     return Ok(new { message = "User unlocked" });
 }
 
-       
         [HttpPost("{userId}/roles/{roleName}")]
         public async Task<IActionResult> AssignRole(string userId, string roleName)
         {
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return NotFound("User not found");
 
-            var res = await _userManager.AddToRoleAsync(user, roleName);
-            if (!res.Succeeded) return BadRequest(res.Errors);
+          
+            var roleExists = await _db.Roles.AnyAsync(r => r.Name == roleName);
+            if (!roleExists)
+            {
+                return BadRequest(new { message = $"Role '{roleName}' does not exist." });
+            }
 
-            await _audit.LogAsync(userId, "ASSIGN_ROLE", "UserRoles", 0,
-                $"Assigned role: {roleName}", GetIp(), GetUA());
+            try
+            {
+                var res = await _userManager.AddToRoleAsync(user, roleName);
+                if (!res.Succeeded) return BadRequest(res.Errors);
 
-            return Ok(new { message = $"Role '{roleName}' assigned" });
+                await _audit.LogAsync(userId, "ASSIGN_ROLE", "UserRoles", 0,
+                    $"Assigned role: {roleName}", GetIp(), GetUA());
+
+                return Ok(new { message = $"Role '{roleName}' assigned" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while assigning the role", details = ex.Message });
+            }
         }
 
-      
+
         [HttpDelete("{userId}/roles/{roleName}")]
         public async Task<IActionResult> RemoveRole(string userId, string roleName)
         {
