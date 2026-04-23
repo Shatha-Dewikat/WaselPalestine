@@ -37,7 +37,18 @@ public class IncidentMediasController : ControllerBase
     [Authorize(Roles = "Admin,Moderator")]
     public async Task<IActionResult> DeleteMedia(int id)
     {
-        await _service.DeleteMediaAsync(id);
-        return Ok(new { success = true, message = "Deleted" });
+        try
+        {
+            await _service.DeleteMediaAsync(id);
+            return Ok(new { success = true, message = "تم الحذف بنجاح" });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "فشل الحذف: " + ex.Message });
+        }
     }
 }

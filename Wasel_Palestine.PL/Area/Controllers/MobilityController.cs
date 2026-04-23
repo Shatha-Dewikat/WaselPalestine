@@ -2,7 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Wasel_Palestine.BAL.Service;
 using Wasel_Palestine.BAL.DTOs;
+using Wasel_Palestine.BAL;
+
 using Wasel_Palestine.BAL.Service;
+using Wasel_Palestine.DAL.DTO.Response;
+
 
 namespace Wasel_Palestine.PL.Area.Controllers
 {
@@ -58,6 +62,7 @@ namespace Wasel_Palestine.PL.Area.Controllers
       
       
         [HttpPost("dismiss-report/{id}")]
+      
         public async Task<IActionResult> DismissReport(int id)
         {
             var result = await _reportingService.DismissReportAsync(id);
@@ -70,6 +75,7 @@ namespace Wasel_Palestine.PL.Area.Controllers
 
      
         [HttpGet("active-reports")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> GetActiveReports()
         {
             var reports = await _reportingService.GetActiveReportsAsync();

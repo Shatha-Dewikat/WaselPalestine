@@ -28,7 +28,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Wasel_Palestine.BAL\Wasel_Palestine.BLL.csproj" />
+		<ProjectReference Include="..\Wasel_Palestine.BAL\Wasel_Palestine.BL.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
