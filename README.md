@@ -3,7 +3,7 @@
 #  Wasel Palestine
 ### Smart Mobility & Checkpoint Intelligence Platform
 
-![.NET](https://img.shields.io/badge/.NET_8-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
+![.NET](https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![SQL Server](https://img.shields.io/badge/SQL_Server-CC2927?style=for-the-badge&logo=microsoftsqlserver&logoColor=white)
 ![SSMS](https://img.shields.io/badge/SSMS-CC2927?style=for-the-badge&logo=microsoftsqlserver&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
@@ -95,7 +95,7 @@ Both services communicate over a shared Docker network (`waselnet`). EF Core mig
 
 | Concern | Choice | Reason |
 |---|---|---|
-| **Framework** | ASP.NET Core (.NET 8) | High-throughput async pipeline, first-class DI, built-in middleware for rate limiting, auth, compression |
+| **Framework** | ASP.NET Core (.NET 10) |High-throughput async pipeline, first-class DI, built-in middleware for rate limiting, auth, compression |
 | **Architecture** | Clean Architecture (3 layers) | Strict separation of concerns; DAL/BAL/PL are independent projects |
 | **ORM** | Entity Framework Core + Raw SQL | EF for productivity; raw SQL for performance-critical queries |
 | **Database Engine** | SQL Server 2022 | Relational integrity, NetTopologySuite for spatial types, ACID compliance |
