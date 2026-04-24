@@ -209,7 +209,7 @@ If avoidCheckpoints = true:
 
 ### Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [SQL Server 2022](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) (local installation)
 - [SQL Server Management Studio (SSMS)](https://aka.ms/ssmsfullsetup) — for database administration
 - [Docker](https://www.docker.com/) & Docker Compose — for running the API container
