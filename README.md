@@ -139,8 +139,8 @@ All endpoints are versioned at `/api/v1/`. Admin routes use `/api/admin/` with s
 | `GET/POST /api/v1/Reports` | ReportsController | Submit, list, vote, moderate |
 | `GET /api/v1/Routes/estimate` | RoutesController | Route estimation with checkpoint awareness |
 | `GET/POST /api/v1/Alerts` | AlertsController | Subscribe, list alerts |
-| `GET /api/admin/users` | AdminUsersController | Manage user accounts and roles |
-| `GET /api/admin/auditlogs` | AdminAuditLogsController | Read-only audit log |
+| `GET /api/admin/v1/users` | AdminUsersController | Manage user accounts and roles |
+| `GET /api/admin/v1/auditlogs` | AdminAuditLogsController | Read-only audit log |
 
 ### Design Decisions
 
