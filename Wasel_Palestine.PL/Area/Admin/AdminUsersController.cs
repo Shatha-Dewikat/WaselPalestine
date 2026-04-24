@@ -9,7 +9,7 @@ using Wasel_Palestine.DAL.Utils;
 namespace Wasel_Palestine.PL.Area.Admin
 {
     [ApiController]
-    [Route("api/admin/users")]
+    [Route("api/admin/v1/users")]
     [Authorize(Policy = "AdminOrModerator")]
     public class AdminUsersController : ControllerBase
     {

@@ -5,7 +5,7 @@ using System.Security.Claims;
 namespace Wasel_Palestine.PL.Area.Auth
 {
     [ApiController]
-    [Route("api/[Controller]")]
+    [Route("api/v1/[Controller]")]
     public class MeController : ControllerBase
     {
         [HttpGet]

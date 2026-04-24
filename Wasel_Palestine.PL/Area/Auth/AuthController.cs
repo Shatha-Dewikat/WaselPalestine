@@ -14,7 +14,7 @@ namespace Wasel_Palestine.PL.Area.Auth
 {
 
     [ApiController]
-    [Route("api/auth/[controller]")]
+    [Route("api/auth/v1/[controller]")]
     [AllowAnonymous]
     public class AuthController(IAuthenticationService authenticationService) : ControllerBase
     {

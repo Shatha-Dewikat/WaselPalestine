@@ -8,7 +8,7 @@ using Wasel_Palestine.DAL.DTO.Request;
 
 namespace Wasel_Palestine.PL.Area.Alerts
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     public class AlertsController : ControllerBase
     {
