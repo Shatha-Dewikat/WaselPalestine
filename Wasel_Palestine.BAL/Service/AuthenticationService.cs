@@ -145,8 +145,8 @@ namespace Wasel_Palestine.BLL.Service
               
                 var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
-                var confirmationLink = $"http://localhost:32768/api/auth/Auth/ConfirmEmail?userId={user.Id}&token={encodedToken}";
-                //                var confirmationLink = $"http://localhost:5034/api/auth/Auth/ConfirmEmail?userId={user.Id}&token={encodedToken}";
+                var confirmationLink = $"http://localhost:32768/api/auth/v1/Auth/ConfirmEmail?userId={user.Id}&token={encodedToken}";
+                //                var confirmationLink = $"http://localhost:5034/api/auth/v1/Auth/ConfirmEmail?userId={user.Id}&token={encodedToken}";
 
                 await _emailSender.SendEmailAsync(
                     user.Email,
