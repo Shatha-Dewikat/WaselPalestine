@@ -16,11 +16,11 @@ namespace Wasel_Palestine.DAL.Utils
 
         public async Task DataSeed()
         {
-            string[] roles = { "Supervisor", "Admin", "User" };
+            string[] roles = { "Moderator", "Admin", "User" };
 
             foreach (var roleName in roles)
             {
-                if (!await _roleManager.RoleExistsAsync(roleName))
+               if (!await _roleManager.RoleExistsAsync(roleName))
                 {
                     var role = new Role
                     {

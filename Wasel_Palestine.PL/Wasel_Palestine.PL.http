@@ -1,4 +1,4 @@
-@Wasel_Palestine.PL_HostAddress = http://localhost:5034
+@Wasel_Palestine.PL_HostAddress = https://localhost:5034
 
 GET {{Wasel_Palestine.PL_HostAddress}}/weatherforecast/
 Accept: application/json

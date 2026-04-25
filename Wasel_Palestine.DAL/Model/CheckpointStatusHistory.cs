@@ -11,7 +11,9 @@ namespace Wasel_Palestine.DAL.Model
         public int CheckpointId { get; set; }
         public Checkpoint Checkpoint { get; set; }
 
-        public string Status { get; set; }
+        public string OldStatus { get; set; }
+        public string NewStatus { get; set; }
+
         public DateTime ChangedAt { get; set; }
 
         public string ChangedByUserId { get; set; }

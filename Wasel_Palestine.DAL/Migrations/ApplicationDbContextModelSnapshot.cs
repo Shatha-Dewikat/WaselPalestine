@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using NetTopologySuite.Geometries;
 using Wasel_Palestine.DAL.Data;
 
 #nullable disable
@@ -17,7 +18,7 @@ namespace Wasel_Palestine.DAL.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.3")
+                .HasAnnotation("ProductVersion", "10.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -142,6 +143,12 @@ namespace Wasel_Palestine.DAL.Migrations
                     b.Property<int>("IncidentId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IncidentId");
@@ -246,32 +253,38 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.Property<string>("Action")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Details")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("EntityId")
                         .HasColumnType("int");
 
                     b.Property<string>("EntityName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("IPAddress")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
 
                     b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
                     b.Property<string>("UserAgent")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("UserId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
@@ -289,6 +302,12 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("CheckpointStatusId")
+                        .HasColumnType("int");
+
+                    b.Property<double>("ConfidenceScore")
+                        .HasColumnType("float");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -299,8 +318,51 @@ namespace Wasel_Palestine.DAL.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("DescriptionAr")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DescriptionEn")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("EstimatedDelayMinutes")
+                        .HasColumnType("int");
+
                     b.Property<int>("LocationId")
                         .HasColumnType("int");
+
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CheckpointStatusId");
+
+                    b.HasIndex("LocationId");
+
+                    b.ToTable("Checkpoints");
+                });
+
+            modelBuilder.Entity("Wasel_Palestine.DAL.Model.CheckpointStatus", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -308,9 +370,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("LocationId");
-
-                    b.ToTable("Checkpoints");
+                    b.ToTable("CheckpointStatuses");
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.CheckpointStatusHistory", b =>
@@ -331,7 +391,11 @@ namespace Wasel_Palestine.DAL.Migrations
                     b.Property<int>("CheckpointId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Status")
+                    b.Property<string>("NewStatus")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldStatus")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -342,6 +406,29 @@ namespace Wasel_Palestine.DAL.Migrations
                     b.HasIndex("CheckpointId");
 
                     b.ToTable("CheckpointStatusHistories");
+                });
+
+            modelBuilder.Entity("Wasel_Palestine.DAL.Model.CityIncidentStats", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ActiveIncidentsCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ClosedCheckpointsCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CityIncidentStats");
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.ExternalApiCache", b =>
@@ -399,7 +486,6 @@ namespace Wasel_Palestine.DAL.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CreatedByUserId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("DeletedAt")
@@ -409,7 +495,23 @@ namespace Wasel_Palestine.DAL.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("DescriptionAr")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("IncidentCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("IncidentSeverityId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("IncidentStatusId")
+                        .HasColumnType("int");
+
                     b.Property<int>("LocationId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RelatedCheckpointId")
                         .HasColumnType("int");
 
                     b.Property<int>("SeverityId")
@@ -419,6 +521,10 @@ namespace Wasel_Palestine.DAL.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TitleAr")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -441,7 +547,15 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasIndex("CreatedByUserId");
 
+                    b.HasIndex("IncidentCategoryId");
+
+                    b.HasIndex("IncidentSeverityId");
+
+                    b.HasIndex("IncidentStatusId");
+
                     b.HasIndex("LocationId");
+
+                    b.HasIndex("RelatedCheckpointId");
 
                     b.HasIndex("SeverityId");
 
@@ -460,7 +574,14 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NameAr")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -477,14 +598,22 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<DateTime>("ChangedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("ChangedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ChangedByUserId1")
+                    b.Property<string>("ChangedByUserId")
+                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Changes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("IncidentId")
                         .HasColumnType("int");
@@ -494,7 +623,7 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ChangedByUserId1");
+                    b.HasIndex("ChangedByUserId");
 
                     b.HasIndex("IncidentId");
 
@@ -511,11 +640,22 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("IncidentId")
                         .HasColumnType("int");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Url")
                         .IsRequired()
@@ -536,6 +676,9 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("Level")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -552,6 +695,10 @@ namespace Wasel_Palestine.DAL.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -572,14 +719,21 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.Property<string>("AreaName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("City")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Point>("Coordinates")
+                        .HasColumnType("geography");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
                     b.Property<decimal>("Latitude")
                         .HasPrecision(9, 6)
@@ -662,7 +816,6 @@ namespace Wasel_Palestine.DAL.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("DuplicateOfReportId")
@@ -704,16 +857,18 @@ namespace Wasel_Palestine.DAL.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("MediaType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MediaUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("ReportId")
                         .HasColumnType("int");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("VoteType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -897,6 +1052,9 @@ namespace Wasel_Palestine.DAL.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<string>("CodeResetPassword")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -947,11 +1105,20 @@ namespace Wasel_Palestine.DAL.Migrations
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("PasswordResetCodeExpiry")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
+
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("RefreshTokenExpiryTime")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -1156,15 +1323,17 @@ namespace Wasel_Palestine.DAL.Migrations
                 {
                     b.HasOne("Wasel_Palestine.DAL.Model.User", "User")
                         .WithMany("AuditLogs")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("UserId");
 
                     b.Navigation("User");
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.Checkpoint", b =>
                 {
+                    b.HasOne("Wasel_Palestine.DAL.Model.CheckpointStatus", null)
+                        .WithMany("Checkpoints")
+                        .HasForeignKey("CheckpointStatusId");
+
                     b.HasOne("Wasel_Palestine.DAL.Model.Location", "Location")
                         .WithMany("Checkpoints")
                         .HasForeignKey("LocationId")
@@ -1196,9 +1365,9 @@ namespace Wasel_Palestine.DAL.Migrations
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.Incident", b =>
                 {
                     b.HasOne("Wasel_Palestine.DAL.Model.IncidentCategory", "Category")
-                        .WithMany("Incidents")
+                        .WithMany()
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("Wasel_Palestine.DAL.Model.Checkpoint", "Checkpoint")
@@ -1213,8 +1382,19 @@ namespace Wasel_Palestine.DAL.Migrations
                     b.HasOne("Wasel_Palestine.DAL.Model.User", "CreatedByUser")
                         .WithMany("CreatedIncidents")
                         .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Wasel_Palestine.DAL.Model.IncidentCategory", null)
+                        .WithMany("Incidents")
+                        .HasForeignKey("IncidentCategoryId");
+
+                    b.HasOne("Wasel_Palestine.DAL.Model.IncidentSeverity", null)
+                        .WithMany("Incidents")
+                        .HasForeignKey("IncidentSeverityId");
+
+                    b.HasOne("Wasel_Palestine.DAL.Model.IncidentStatus", null)
+                        .WithMany("Incidents")
+                        .HasForeignKey("IncidentStatusId");
 
                     b.HasOne("Wasel_Palestine.DAL.Model.Location", "Location")
                         .WithMany("Incidents")
@@ -1222,16 +1402,21 @@ namespace Wasel_Palestine.DAL.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Wasel_Palestine.DAL.Model.Checkpoint", "RelatedCheckpoint")
+                        .WithMany("RelatedIncidents")
+                        .HasForeignKey("RelatedCheckpointId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Wasel_Palestine.DAL.Model.IncidentSeverity", "Severity")
-                        .WithMany("Incidents")
+                        .WithMany()
                         .HasForeignKey("SeverityId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("Wasel_Palestine.DAL.Model.IncidentStatus", "Status")
-                        .WithMany("Incidents")
+                        .WithMany()
                         .HasForeignKey("StatusId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("Wasel_Palestine.DAL.Model.User", "VerifiedByUser")
@@ -1249,6 +1434,8 @@ namespace Wasel_Palestine.DAL.Migrations
 
                     b.Navigation("Location");
 
+                    b.Navigation("RelatedCheckpoint");
+
                     b.Navigation("Severity");
 
                     b.Navigation("Status");
@@ -1260,7 +1447,9 @@ namespace Wasel_Palestine.DAL.Migrations
                 {
                     b.HasOne("Wasel_Palestine.DAL.Model.User", "ChangedByUser")
                         .WithMany()
-                        .HasForeignKey("ChangedByUserId1");
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("Wasel_Palestine.DAL.Model.Incident", "Incident")
                         .WithMany("IncidentHistories")
@@ -1468,7 +1657,14 @@ namespace Wasel_Palestine.DAL.Migrations
                 {
                     b.Navigation("Incidents");
 
+                    b.Navigation("RelatedIncidents");
+
                     b.Navigation("StatusHistories");
+                });
+
+            modelBuilder.Entity("Wasel_Palestine.DAL.Model.CheckpointStatus", b =>
+                {
+                    b.Navigation("Checkpoints");
                 });
 
             modelBuilder.Entity("Wasel_Palestine.DAL.Model.Incident", b =>
