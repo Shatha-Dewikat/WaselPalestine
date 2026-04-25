@@ -43,7 +43,7 @@ public class IncidentMediaService : IIncidentMediaService
         _cache.Remove($"{IncidentCacheKey}{request.IncidentId}");
 
         
-        var baseUrl = "http://localhost:5034";
+        var baseUrl = "http://localhost:32768";
         var response = result.Adapt<IncidentMediaResponse>();
         response.Url = $"{baseUrl}{result.Url}";
 
@@ -53,7 +53,7 @@ public class IncidentMediaService : IIncidentMediaService
     public async Task<List<IncidentMediaResponse>> GetByIncidentIdAsync(int incidentId)
     {
         string cacheKey = $"{MediaCacheKey}{incidentId}";
-        var baseUrl = "http://localhost:5034";
+        var baseUrl = "http://localhost:32768";
 
         if (!_cache.TryGetValue(cacheKey, out List<IncidentMediaResponse> cachedMedia))
         {

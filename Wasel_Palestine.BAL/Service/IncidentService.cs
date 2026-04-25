@@ -602,7 +602,7 @@ namespace Wasel_Palestine.BLL.Service
 
         public async Task<List<IncidentResponse>> GetIncidentsByCheckpointIdAsync(int checkpointId, string lang = "en")
         {
-            var baseUrl = "http://localhost:5034";
+            var baseUrl = "http://localhost:32768";
 
             var incidents = await _context.Incidents
                 .Include(i => i.Category)
